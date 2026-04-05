@@ -68,4 +68,20 @@
     <string name="rooms_time_hours">%1$d h</string>
     <string name="rooms_time_minutes">%1$d m</string>
     <string name="rooms_time_now">now</string>
+    <string name="rooms_menu_check_updates">Check for updates</string>
+    <string name="app_update_dialog_title">Update available</string>
+    <string name="app_update_dialog_message">New version %1$s is available. Download and install?</string>
+    <string name="app_update_notes_header">Release notes</string>
+    <string name="app_update_install">Install</string>
+    <string name="app_update_cancel">Cancel</string>
+    <string name="app_update_checking">Checking for updates…</string>
+    <string name="app_update_downloading">Downloading…</string>
+    <string name="app_update_toast_up_to_date">You already have the latest version</string>
+    <string name="app_update_error_no_apk">No APK file in the latest release on GitHub</string>
+    <string name="app_update_error_network">Could not reach GitHub. Check your connection.</string>
+    <string name="app_update_error_download_http">Download failed (HTTP %1$d)</string>
+    <string name="app_update_permission_title">Allow installation</string>
+    <string name="app_update_permission_body">Allow installing apps from this source in system settings, then tap Install again.</string>
+    <string name="app_update_open_settings">Open settings</string>
+    <string name="app_update_install_retry">Install</string>
 </resources>

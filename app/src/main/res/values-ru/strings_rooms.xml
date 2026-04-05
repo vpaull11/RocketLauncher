@@ -68,4 +68,20 @@
     <string name="rooms_time_hours">%1$dч</string>
     <string name="rooms_time_minutes">%1$dм</string>
     <string name="rooms_time_now">сейчас</string>
+    <string name="rooms_menu_check_updates">Проверить обновления</string>
+    <string name="app_update_dialog_title">Доступно обновление</string>
+    <string name="app_update_dialog_message">Доступна версия %1$s. Скачать и установить?</string>
+    <string name="app_update_notes_header">Изменения</string>
+    <string name="app_update_install">Установить</string>
+    <string name="app_update_cancel">Отмена</string>
+    <string name="app_update_checking">Проверка обновлений…</string>
+    <string name="app_update_downloading">Загрузка…</string>
+    <string name="app_update_toast_up_to_date">У вас уже последняя версия</string>
+    <string name="app_update_error_no_apk">В последнем релизе на GitHub нет APK-файла</string>
+    <string name="app_update_error_network">Не удалось связаться с GitHub. Проверьте подключение.</string>
+    <string name="app_update_error_download_http">Ошибка загрузки (HTTP %1$d)</string>
+    <string name="app_update_permission_title">Разрешение на установку</string>
+    <string name="app_update_permission_body">Разрешите установку приложений из этого источника в настройках системы, затем снова нажмите «Установить».</string>
+    <string name="app_update_open_settings">Открыть настройки</string>
+    <string name="app_update_install_retry">Установить</string>
 </resources>

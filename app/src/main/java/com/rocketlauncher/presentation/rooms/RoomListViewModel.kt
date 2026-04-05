@@ -1,6 +1,7 @@
 package com.rocketlauncher.presentation.rooms
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,8 @@ import com.rocketlauncher.data.dto.SubscriptionDto
 import com.rocketlauncher.data.realtime.RealtimeMessageService
 import com.rocketlauncher.data.realtime.UserPresenceSnapshot
 import com.rocketlauncher.data.realtime.UserPresenceStore
+import com.rocketlauncher.data.repository.AppUpdateCheckResult
+import com.rocketlauncher.data.repository.AppUpdateRepository
 import com.rocketlauncher.data.repository.ChatRoomActionsRepository
 import com.rocketlauncher.data.repository.AuthRepository
 import com.rocketlauncher.data.repository.RoomRepository
@@ -44,8 +47,10 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -80,6 +85,14 @@ data class SubItem(
 
 enum class SubItemType { MAIN, THREAD, DISCUSSION }
 
+sealed class AppUpdateUiState {
+    data object Idle : AppUpdateUiState()
+    data object Checking : AppUpdateUiState()
+    data class Prompt(val remoteVersion: String, val notes: String?, val apkUrl: String) : AppUpdateUiState()
+    data class Downloading(val progress: Float?) : AppUpdateUiState()
+    data class PendingInstallPermission(val apkFile: File) : AppUpdateUiState()
+}
+
 /** В раскрытии: «Основной» + сабчаты, не более [MAX_EXPANDED_SUBCHAT_ROWS] строк всего. */
 private const val MAX_EXPANDED_SUBCHAT_ROWS = 7
 private const val MAX_CHILD_SUBITEMS = MAX_EXPANDED_SUBCHAT_ROWS - 1
@@ -109,7 +122,8 @@ data class RoomListUiState(
     val createRoomDialog: CreateRoomDialogState? = null,
     val pendingOpenCreatedRoom: PendingOpenCreatedRoom? = null,
     val toastMessage: String? = null,
-    val presenceSnapshot: UserPresenceSnapshot = UserPresenceSnapshot()
+    val presenceSnapshot: UserPresenceSnapshot = UserPresenceSnapshot(),
+    val appUpdate: AppUpdateUiState = AppUpdateUiState.Idle
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -128,8 +142,11 @@ class RoomListViewModel @Inject constructor(
     private val chatRoomActionsRepository: ChatRoomActionsRepository,
     private val userPresenceStore: UserPresenceStore,
     private val threadParticipationPrefs: ThreadParticipationPrefs,
+    private val appUpdateRepository: AppUpdateRepository,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
+
+    private var appUpdateJob: Job? = null
 
     private val _searchQuery = MutableStateFlow("")
     private val _uiState = MutableStateFlow(RoomListUiState())
@@ -891,6 +908,113 @@ class RoomListViewModel @Inject constructor(
 
     fun clearToastMessage() {
         _uiState.update { it.copy(toastMessage = null) }
+    }
+
+    fun checkForAppUpdate() {
+        appUpdateJob?.cancel()
+        appUpdateJob = viewModelScope.launch {
+            _uiState.update { it.copy(appUpdate = AppUpdateUiState.Checking) }
+            when (val r = appUpdateRepository.checkForUpdate()) {
+                is AppUpdateCheckResult.UpToDate -> {
+                    _uiState.update {
+                        it.copy(
+                            appUpdate = AppUpdateUiState.Idle,
+                            toastMessage = appContext.getString(R.string.app_update_toast_up_to_date)
+                        )
+                    }
+                }
+                is AppUpdateCheckResult.UpdateAvailable -> {
+                    _uiState.update {
+                        it.copy(
+                            appUpdate = AppUpdateUiState.Prompt(
+                                remoteVersion = r.remoteVersion,
+                                notes = r.releaseNotes,
+                                apkUrl = r.apkUrl
+                            )
+                        )
+                    }
+                }
+                is AppUpdateCheckResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            appUpdate = AppUpdateUiState.Idle,
+                            toastMessage = r.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun dismissAppUpdateFlow() {
+        appUpdateJob?.cancel()
+        appUpdateJob = null
+        _uiState.update { it.copy(appUpdate = AppUpdateUiState.Idle) }
+    }
+
+    fun confirmAppUpdateInstall() {
+        val state = _uiState.value.appUpdate
+        if (state !is AppUpdateUiState.Prompt) return
+        appUpdateJob?.cancel()
+        appUpdateJob = viewModelScope.launch {
+            val apkUrl = state.apkUrl
+            _uiState.update { it.copy(appUpdate = AppUpdateUiState.Downloading(0f)) }
+            val result = appUpdateRepository.downloadApk(apkUrl) { p ->
+                _uiState.update { cur ->
+                    cur.copy(
+                        appUpdate = AppUpdateUiState.Downloading(
+                            if (p < 0f) null else p
+                        )
+                    )
+                }
+            }
+            result.fold(
+                onSuccess = { file -> tryInstallApk(file) },
+                onFailure = { e ->
+                    _uiState.update {
+                        it.copy(
+                            appUpdate = AppUpdateUiState.Idle,
+                            toastMessage = e.message
+                                ?: appContext.getString(R.string.app_update_error_download_http, -1)
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    private fun tryInstallApk(file: File) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !appContext.packageManager.canRequestPackageInstalls()
+        ) {
+            _uiState.update {
+                it.copy(appUpdate = AppUpdateUiState.PendingInstallPermission(file))
+            }
+            return
+        }
+        try {
+            appContext.startActivity(appUpdateRepository.installApkIntent(file))
+        } catch (e: Exception) {
+            Log.e("RoomListVM", "tryInstallApk: ${e.message}")
+            _uiState.update {
+                it.copy(
+                    appUpdate = AppUpdateUiState.Idle,
+                    toastMessage = e.message
+                )
+            }
+            return
+        }
+        _uiState.update { it.copy(appUpdate = AppUpdateUiState.Idle) }
+    }
+
+    fun openUnknownSourcesSettings() {
+        appContext.startActivity(appUpdateRepository.unknownSourcesSettingsIntent())
+    }
+
+    fun retryInstallAfterPermission() {
+        val state = _uiState.value.appUpdate
+        if (state !is AppUpdateUiState.PendingInstallPermission) return
+        tryInstallApk(state.apkFile)
     }
 
     private fun dmPeerUsernamesFromRooms(rooms: List<RoomEntity>): Set<String> =

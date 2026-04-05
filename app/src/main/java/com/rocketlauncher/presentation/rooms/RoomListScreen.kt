@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,9 +42,11 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -55,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
@@ -78,6 +82,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -143,6 +148,109 @@ fun RoomListScreen(
             onPickDiscussionParent = { viewModel.selectDiscussionParent(it) },
             onSubmit = { viewModel.submitCreateRoom() }
         )
+    }
+
+    when (val au = uiState.appUpdate) {
+        is AppUpdateUiState.Checking -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissAppUpdateFlow() },
+                title = { Text(stringResource(R.string.app_update_checking)) },
+                text = { CircularProgressIndicator() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissAppUpdateFlow() }) {
+                        Text(stringResource(R.string.app_update_cancel))
+                    }
+                }
+            )
+        }
+        is AppUpdateUiState.Prompt -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissAppUpdateFlow() },
+                title = { Text(stringResource(R.string.app_update_dialog_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.app_update_dialog_message, au.remoteVersion))
+                        au.notes?.let { notes ->
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                stringResource(R.string.app_update_notes_header),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                notes,
+                                modifier = Modifier
+                                    .heightIn(max = 180.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.confirmAppUpdateInstall() }) {
+                        Text(stringResource(R.string.app_update_install))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissAppUpdateFlow() }) {
+                        Text(stringResource(R.string.app_update_cancel))
+                    }
+                }
+            )
+        }
+        is AppUpdateUiState.Downloading -> {
+            Dialog(onDismissRequest = {}) {
+                Card {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            stringResource(R.string.app_update_downloading),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        val prog = au.progress
+                        if (prog == null) {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        } else {
+                            LinearProgressIndicator(
+                                progress = prog,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        is AppUpdateUiState.PendingInstallPermission -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissAppUpdateFlow() },
+                title = { Text(stringResource(R.string.app_update_permission_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.app_update_permission_body))
+                        Spacer(Modifier.height(16.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { viewModel.retryInstallAfterPermission() }) {
+                                Text(stringResource(R.string.app_update_install_retry))
+                            }
+                            TextButton(onClick = { viewModel.openUnknownSourcesSettings() }) {
+                                Text(stringResource(R.string.app_update_open_settings))
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissAppUpdateFlow() }) {
+                        Text(stringResource(R.string.app_update_cancel))
+                    }
+                }
+            )
+        }
+        else -> {}
     }
 
     Scaffold(
@@ -291,6 +399,16 @@ fun RoomListScreen(
                                     },
                                     leadingIcon = {
                                         Icon(Icons.Default.FilterList, contentDescription = null)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.rooms_menu_check_updates)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.checkForAppUpdate()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Filled.Download, contentDescription = null)
                                     }
                                 )
                                 DropdownMenuItem(
