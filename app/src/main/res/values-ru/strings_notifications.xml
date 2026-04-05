@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_messages_name">Новые сообщения</string>
+    <string name="notif_channel_messages_desc">Уведомления о новых сообщениях в чатах</string>
+    <string name="notif_channel_ws_name">Сообщения</string>
+    <string name="notif_channel_ws_desc">Фоновое получение сообщений</string>
+    <string name="notif_channel_calls_name">Видеозвонки</string>
+    <string name="notif_channel_calls_desc">Входящие видеозвонки Rocket.Chat / Jitsi</string>
+    <string name="notif_ws_connecting">Подключение…</string>
+    <string name="notif_ws_connected">Подключено</string>
+    <string name="notif_ws_reconnecting">Переподключение…</string>
+    <string name="notif_ws_disconnected">Отключено</string>
+    <string name="fcm_fallback_title">RocketLauncher</string>
+    <string name="fcm_new_message_fallback">Новое сообщение</string>
+    <string name="notif_disabled_log">Уведомления отключены в настройках системы</string>
+    <string name="incoming_call_default_room">Чат</string>
+    <string name="incoming_call_default_caller">Участник</string>
+    <string name="incoming_call_heading">Входящий видеозвонок</string>
+    <string name="incoming_call_decline">Отклонить</string>
+    <string name="incoming_call_accept">Принять</string>
+    <string name="incoming_call_open_failed">Не удалось открыть звонок</string>
+    <string name="incoming_call_connect_failed">Не удалось подключиться</string>
+    <string name="jitsi_notif_call_text">%1$s — видеозвонок</string>
+    <string name="notif_summary_new_messages">Новые сообщения</string>
+</resources>

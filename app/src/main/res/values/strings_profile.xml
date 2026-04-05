@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_title">My profile</string>
+    <string name="profile_saved_toast">Profile saved</string>
+    <string name="profile_retry">Retry</string>
+    <string name="profile_login_label">Login</string>
+    <string name="profile_display_name">Display name</string>
+    <string name="profile_nickname">Nickname</string>
+    <string name="profile_bio">About</string>
+    <string name="profile_status_section">Status</string>
+    <string name="profile_status_text">Status text</string>
+    <string name="profile_status_placeholder">e.g. On vacation</string>
+    <string name="profile_saving">Saving…</string>
+    <string name="profile_save">Save</string>
+    <string name="status_online">Online</string>
+    <string name="status_away">Away</string>
+    <string name="status_busy">Busy</string>
+    <string name="status_offline">Offline</string>
+    <string name="profile_load_error">Failed to load</string>
+    <string name="profile_save_error">Failed to save</string>
+</resources>

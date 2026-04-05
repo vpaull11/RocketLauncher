@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_light">Light theme</string>
+    <string name="theme_dark">Dark theme</string>
+    <string name="theme_system">Match system</string>
+    <string name="favorite_inline">At top within each group</string>
+    <string name="favorite_separate">Separate group</string>
+</resources>

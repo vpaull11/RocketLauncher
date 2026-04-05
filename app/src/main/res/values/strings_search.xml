@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="global_search_title">Message search</string>
+    <string name="global_search_placeholder">Search text across all chats</string>
+    <string name="cd_search_submit">Search</string>
+    <string name="global_search_min_chars">At least 2 characters</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_title">Мой профиль</string>
+    <string name="profile_saved_toast">Профиль сохранён</string>
+    <string name="profile_retry">Повторить</string>
+    <string name="profile_login_label">Логин</string>
+    <string name="profile_display_name">Отображаемое имя</string>
+    <string name="profile_nickname">Псевдоним</string>
+    <string name="profile_bio">О себе</string>
+    <string name="profile_status_section">Статус</string>
+    <string name="profile_status_text">Текст статуса</string>
+    <string name="profile_status_placeholder">Например: В отпуске</string>
+    <string name="profile_saving">Сохранение…</string>
+    <string name="profile_save">Сохранить</string>
+    <string name="status_online">Онлайн</string>
+    <string name="status_away">Отошёл</string>
+    <string name="status_busy">Занят</string>
+    <string name="status_offline">Не в сети</string>
+    <string name="profile_load_error">Ошибка загрузки</string>
+    <string name="profile_save_error">Ошибка сохранения</string>
+</resources>

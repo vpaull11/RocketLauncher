@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RocketLauncher</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_back">Назад</string>
+    <string name="action_copy">Скопировать</string>
+    <string name="action_confirm">Подтвердить</string>
+    <string name="action_more">Ещё</string>
+    <string name="action_search">Поиск</string>
+    <string name="action_clear">Очистить</string>
+    <string name="action_create">Создать</string>
+    <string name="action_exit">Выйти</string>
+    <string name="action_insert">Вставить</string>
+    <string name="error_generic">Ошибка</string>
+    <string name="error_generic_with_message">Ошибка: %1$s</string>
+    <string name="default_room_chat">Чат</string>
+    <string name="default_thread">Тред</string>
+    <string name="default_discussion">Обсуждение</string>
+    <string name="default_participant">Участник</string>
+    <string name="default_username_fallback">Пользователь</string>
+</resources>

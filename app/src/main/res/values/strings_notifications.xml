@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_messages_name">New messages</string>
+    <string name="notif_channel_messages_desc">Notifications for new chat messages</string>
+    <string name="notif_channel_ws_name">Messages</string>
+    <string name="notif_channel_ws_desc">Background message sync</string>
+    <string name="notif_channel_calls_name">Video calls</string>
+    <string name="notif_channel_calls_desc">Incoming Rocket.Chat / Jitsi video calls</string>
+    <string name="notif_ws_connecting">Connecting…</string>
+    <string name="notif_ws_connected">Connected</string>
+    <string name="notif_ws_reconnecting">Reconnecting…</string>
+    <string name="notif_ws_disconnected">Disconnected</string>
+    <string name="fcm_fallback_title">RocketLauncher</string>
+    <string name="fcm_new_message_fallback">New message</string>
+    <string name="notif_disabled_log">Notifications disabled in system settings</string>
+    <string name="incoming_call_default_room">Chat</string>
+    <string name="incoming_call_default_caller">Member</string>
+    <string name="incoming_call_heading">Incoming video call</string>
+    <string name="incoming_call_decline">Decline</string>
+    <string name="incoming_call_accept">Accept</string>
+    <string name="incoming_call_open_failed">Could not open call</string>
+    <string name="incoming_call_connect_failed">Could not connect</string>
+    <string name="jitsi_notif_call_text">%1$s — video call</string>
+    <string name="notif_summary_new_messages">New messages</string>
+</resources>

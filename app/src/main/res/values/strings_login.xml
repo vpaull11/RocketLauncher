@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_headline">RocketLauncher</string>
+    <string name="login_server_url_label">Rocket.Chat server URL</string>
+    <string name="login_username_label">Username or email</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_signing_in">Signing in…</string>
+    <string name="login_sign_in_password">Sign in with password</string>
+    <string name="login_oauth_hint">OAuth / SSO (URL is taken from server settings)</string>
+    <string name="login_oauth_loading">Loading OAuth…</string>
+    <string name="login_oauth_button">Sign in with OAuth / SSO</string>
+    <string name="login_oauth_debug">API: %1$s\nOAuth: %2$s</string>
+    <string name="login_oauth_not_configured">OAuth is not configured</string>
+    <string name="login_error_generic">Sign-in error</string>
+    <string name="login_error_oauth">OAuth error</string>
+    <string name="login_error_wrong_otp">Invalid code</string>
+    <string name="login_otp_no_email">No email/username to send a code</string>
+    <string name="login_otp_title">Two-factor authentication</string>
+    <string name="login_otp_hint_email">Enter the code from the email sent to %1$s</string>
+    <string name="login_otp_hint_generic">Enter the confirmation code</string>
+    <string name="login_otp_code_label">Code</string>
+    <string name="login_otp_send_email">Send code to email</string>
+    <string name="login_email_code_sent">Code sent to email</string>
+    <string name="login_email_code_error">Error: %1$s</string>
+</resources>

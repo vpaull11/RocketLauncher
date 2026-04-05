@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_headline">RocketLauncher</string>
+    <string name="login_server_url_label">URL сервера Rocket.Chat</string>
+    <string name="login_username_label">Имя пользователя или email</string>
+    <string name="login_password_label">Пароль</string>
+    <string name="login_signing_in">Вход…</string>
+    <string name="login_sign_in_password">Войти по паролю</string>
+    <string name="login_oauth_hint">OAuth / SSO (URL берётся из настроек сервера)</string>
+    <string name="login_oauth_loading">Загрузка OAuth…</string>
+    <string name="login_oauth_button">Войти через OAuth / SSO</string>
+    <string name="login_oauth_debug">API: %1$s\nOAuth: %2$s</string>
+    <string name="login_oauth_not_configured">OAuth не настроен</string>
+    <string name="login_error_generic">Ошибка входа</string>
+    <string name="login_error_oauth">Ошибка OAuth</string>
+    <string name="login_error_wrong_otp">Неверный код</string>
+    <string name="login_otp_no_email">Нет email/username для отправки кода</string>
+    <string name="login_otp_title">Двухфакторная аутентификация</string>
+    <string name="login_otp_hint_email">Введите код из письма, отправленного на %1$s</string>
+    <string name="login_otp_hint_generic">Введите код подтверждения</string>
+    <string name="login_otp_code_label">Код</string>
+    <string name="login_otp_send_email">Отправить код на email</string>
+    <string name="login_email_code_sent">Код отправлен на email</string>
+    <string name="login_email_code_error">Ошибка: %1$s</string>
+</resources>

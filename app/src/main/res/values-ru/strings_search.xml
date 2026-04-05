@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="global_search_title">Поиск по сообщениям</string>
+    <string name="global_search_placeholder">Текст для поиска во всех чатах</string>
+    <string name="cd_search_submit">Искать</string>
+    <string name="global_search_min_chars">Минимум 2 символа</string>
+</resources>

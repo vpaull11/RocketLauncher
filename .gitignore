@@ -1,0 +1,43 @@
+# Gradle
+.gradle/
+build/
+
+# Локальная конфигурация (SDK path)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+.kotlin/
+
+# Сборки и артефакты
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Логи и дампы
+*.log
+*.hprof
+
+# Нативная сборка CMake
+.externalNativeBuild/
+.cxx/
+
+# Захваты экрана из Android Studio
+captures/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Подпись release — не коммитить
+keystore.properties
+*.jks
+*.keystore
+
+# Firebase: реальный файл из Console — только локально (шаблон: app/google-services.json.example)
+app/google-services.json
