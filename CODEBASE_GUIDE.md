@@ -15,7 +15,7 @@
 | Package | `com.rocketlauncher` |
 | minSdk | 26 (Android 8.0) |
 | targetSdk / compileSdk | 35 |
-| versionName | 1.0.5 (versionCode = 5) |
+| versionName | 1.0.6 (versionCode = 6) |
 | Язык | Kotlin + 1 Java-файл (`UrlFormEncode.java`) |
 | UI | Jetpack Compose + Material 3 |
 | DI | Hilt |
