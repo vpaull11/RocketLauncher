@@ -38,7 +38,13 @@ data class MessageDto(
     val score: Double? = null,
     /** Время закрепления (для сортировки в [chat.getPinnedMessages]). */
     val pinnedAt: String? = null,
-    val pinned: Boolean? = null
+    val pinned: Boolean? = null,
+    /**
+     * UIKit-блоки Rocket.Chat Apps Engine (опросы, интерактивные сообщения).
+     * Присутствует в сообщениях, созданных Poll App / другими приложениями.
+     * Хранится в [com.rocketlauncher.data.db.MessageEntity.blocksJson] как JSON-строка.
+     */
+    val blocks: List<UiKitBlock>? = null
 )
 
 @Serializable
@@ -90,7 +96,9 @@ data class AttachmentDto(
     val type: String? = null,
     val ts: String? = null,
     /** Вложенные вложения (пересылка с файлом и т.п.); в JSON возможен `null` в массиве. */
-    val attachments: List<AttachmentDto?>? = null
+    val attachments: List<AttachmentDto?>? = null,
+    /** Блоки UIKit, если приложение отправляет их внутри вложения (например, новые версии Poll App) */
+    val blocks: List<UiKitBlock>? = null
 )
 
 @Serializable

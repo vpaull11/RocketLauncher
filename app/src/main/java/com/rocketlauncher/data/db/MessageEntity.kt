@@ -49,7 +49,13 @@ data class MessageEntity(
      * Прочитано ли сообщение другими участниками (галочки «прочитано»).
      * null — статус ещё не запрашивали / неизвестен; false — нет квитанций от других; true — есть.
      */
-    val readByOthers: Boolean? = null
+    val readByOthers: Boolean? = null,
+    /**
+     * JSON-массив UIKit-блоков из поля `blocks` сообщения Rocket.Chat.
+     * Присутствует в сообщениях опросов (Poll App) и других интерактивных сообщениях.
+     * null — обычное сообщение без блоков. Парсится при рендеринге в [PollBlock].
+     */
+    val blocksJson: String? = null
 ) {
     companion object {
         const val SYNC_PENDING = 0

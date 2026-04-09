@@ -229,6 +229,23 @@ interface RocketChatApi {
     @POST("api/v1/chat.react")
     suspend fun reactToMessage(@Body request: ReactRequest): ReactResponse
 
+    /** API для запуска слэш-команд (например, /poll) */
+    @POST("api/v1/commands.run")
+    suspend fun runCommand(@Body request: Map<String, String>): GenericResponse
+
+    /**
+     * Apps Engine UI-взаимодействие: blockAction (голосование в опросе) и viewSubmit (создание опроса).
+     * Правильный REST-метод, который использует официальный клиент Rocket.Chat.
+     * appId — UUID приложения (из поля `appId` UIKit-блока).
+     * Возвращает сырое тело ответа — сервер может вернуть разные структуры.
+     */
+    @POST("api/apps/ui.interaction/{appId}")
+    suspend fun sendUiInteraction(
+        @Path("appId") appId: String,
+        @Body request: kotlinx.serialization.json.JsonObject
+    ): okhttp3.ResponseBody
+
+
     /** Удаление сообщения: `roomId`, `msgId` (Rocket.Chat REST). */
     @POST("api/v1/chat.delete")
     suspend fun deleteMessage(@Body body: Map<String, String>): GenericResponse

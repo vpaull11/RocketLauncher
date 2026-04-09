@@ -45,6 +45,13 @@ import java.io.IOException
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 private const val TAG = "MessageRepo"
 
@@ -165,7 +172,17 @@ class MessageRepository @Inject constructor(
                 val entities = response.messages.map { dto ->
                     mergeReadReceiptsFromDb(dto.toEntity(roomId))
                 }
+                // REPLACE полностью перезаписывает строки — это нормально для новых сообщений.
+                // Для существующих сообщений с опросами REPLACE затрёт актуальные блоки из WebSocket
+                // данными из REST, которые могут быть актуальными (REST тоже возвращает текущее состояние).
+                // Дополнительно принудительно обновляем blocksJson из REST-ответа для каждого сообщения,
+                // чтобы гарантировать отображение актуальных результатов голосования после переоткрытия чата.
                 messageDao.insertAll(entities)
+                for (entity in entities) {
+                    if (!entity.blocksJson.isNullOrBlank()) {
+                        messageDao.updateBlocksJson(entity.id, entity.blocksJson)
+                    }
+                }
                 entities.size
             } else {
                 0
@@ -175,6 +192,7 @@ class MessageRepository @Inject constructor(
             0
         }
     }
+
 
     /** Самое раннее сообщение за календарный день [startInclusive, endExclusive) (порядок в БД — по возрастанию времени). */
     suspend fun findEarliestMessageIdOnCalendarDay(
@@ -285,6 +303,158 @@ class MessageRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun runSlashCommand(roomId: String, command: String, params: String, tmid: String? = null): Result<Unit> {
+        val api = apiProvider.getApi() ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            val body = mutableMapOf(
+                "command" to command,
+                "params" to params,
+                "roomId" to roomId
+            )
+            if (tmid != null) body["tmid"] = tmid
+            Log.d(TAG, "runSlashCommand: command=$command roomId=$roomId params=[$params]")
+            val response = api.runCommand(body)
+            Log.d(TAG, "runSlashCommand response: success=${response.success} error=${response.error}")
+            if (response.success) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.error ?: "Failed to run command"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "runSlashCommand failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Отправляет голос за вариант опроса через REST `POST /api/apps/ui.interaction/{appId}`.
+     *
+     * Payload соответствует тому, что отправляет официальный веб-клиент Rocket.Chat:
+     * ```
+     * { "type":"blockAction", "actionId":"vote",
+     *   "payload":{ "blockId":"...", "value":"1" },
+     *   "container":{"type":"message","id":"<msgId>"},
+     *   "rid":"<roomId>", "mid":"<msgId>", "triggerId":"<uuid>" }
+     * ```
+     */
+    suspend fun sendBlockActionRest(
+        appId: String,
+        actionId: String,
+        blockId: String,
+        value: String,
+        msgId: String,
+        roomId: String
+    ): Result<Unit> {
+        val api = apiProvider.getApi() ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            val triggerId = java.util.UUID.randomUUID().toString().replace("-", "").take(20)
+            val body = buildJsonObject {
+                put("type", "blockAction")
+                put("actionId", actionId)
+                putJsonObject("payload") {
+                    put("blockId", blockId)
+                    put("value", value)
+                }
+                putJsonObject("container") {
+                    put("type", "message")
+                    put("id", msgId)
+                }
+                put("rid", roomId)
+                put("mid", msgId)
+                put("triggerId", triggerId)
+            }
+            Log.d(TAG, "sendBlockActionRest: appId=$appId actionId=$actionId blockId=${blockId.take(8)}.. value=$value msg=${msgId.take(8)}..")
+            val responseBody = api.sendUiInteraction(appId, body).string()
+            Log.d(TAG, "sendBlockActionRest raw response: $responseBody")
+            val parsed = try { Json.parseToJsonElement(responseBody) } catch (_: Exception) { null }
+            val success = parsed?.let { (it as? JsonObject)?.get("success") }
+                ?.let { it == kotlinx.serialization.json.JsonPrimitive(true) } ?: true
+            val error = parsed?.let { (it as? JsonObject)?.get("error")?.toString()?.trim('"') }
+            if (success) Result.success(Unit)
+            else Result.failure(Exception(error ?: "Block action failed"))
+        } catch (e: Exception) {
+            Log.e(TAG, "sendBlockActionRest failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+
+    /**
+     * Отправляет `viewSubmit` с реальными [triggerId] и [viewId], полученными от сервера через
+     * WebSocket (событие `uiInteraction modal.open`), и заполненными значениями [question]/[options].
+     *
+     * Двухшаговый поток (управляется в ChatViewModel):
+     *  1. commands.run /poll → сервер присылает modal.open через WebSocket
+     *  2. Этот метод отправляет viewSubmit с реальными ID → Poll App создаёт опрос
+     */
+
+    suspend fun submitPollModal(
+        appId: String,
+        triggerId: String,
+        viewId: String,
+        serverViewJson: String,
+        roomId: String,
+        question: String,
+        options: List<String>,
+        anonymous: Boolean,
+        multipleChoice: Boolean
+    ): Result<Unit> {
+        val api = apiProvider.getApi() ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            val modeValue       = if (multipleChoice) "multiple" else "single"
+            val visibilityValue = if (anonymous) "confidential" else "open"
+
+            // Парсим view от сервера и вставляем state с введёнными данными
+            val serverView = try { org.json.JSONObject(serverViewJson) } catch (_: Exception) { org.json.JSONObject() }
+            val stateOptions = options.mapIndexed { idx, opt ->
+                "\"option-$idx\":${escapeJsonString(opt)}"
+            }.joinToString(",")
+
+            val viewWithState = buildString {
+                // Берём оригинальный view от сервера и добавляем state
+                val base = serverView.toString().trimEnd('}')
+                append(base)
+                append(",\"state\":{\"poll\":{\"question\":${escapeJsonString(question)},$stateOptions},")
+                append("\"config\":{\"mode\":\"$modeValue\",\"visibility\":\"$visibilityValue\",\"showResults\":\"always\"}}}")
+            }
+
+            Log.d(TAG, "submitPollModal: triggerId=${triggerId.take(8)}.. viewId=${viewId.take(8)}.. question=$question options=${options.size}")
+            val body = buildJsonObject {
+                put("type", "viewSubmit")
+                putJsonObject("payload") {
+                    put("view", Json.parseToJsonElement(viewWithState))
+                }
+                put("viewId", viewId)
+                put("triggerId", triggerId)
+                put("rid", roomId)
+            }
+
+            val responseBody = api.sendUiInteraction(appId, body).string()
+            Log.d(TAG, "submitPollModal raw response: $responseBody")
+            // Poll App возвращает type:"errors" с пустым errors:{} при успехе (это нормально)
+            val parsed = try { Json.parseToJsonElement(responseBody) as? JsonObject } catch (_: Exception) { null }
+            val type = parsed?.get("type")?.toString()?.trim('"')
+            val errors = parsed?.get("errors")
+            val hasErrors = errors != null && errors.toString() != "{}"
+            return if (!hasErrors) Result.success(Unit)
+            else Result.failure(Exception("Poll App error: $responseBody"))
+        } catch (e: Exception) {
+            Log.e(TAG, "submitPollModal failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+
+    /** JSON-экранирование строки (кавычки и спецсимволы). */
+
+    private fun escapeJsonString(s: String): String {
+        val escaped = s.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+        return "\"$escaped\""
+    }
+
+
 
     /**
      * Пересылка через [chat.postMessage] в форме **официального клиента** Rocket.Chat:
@@ -928,11 +1098,19 @@ class MessageRepository @Inject constructor(
             reactions = reactionsJson,
             mentionsJson = mentionsFromDtoList(mentions),
             syncStatus = MessageEntity.SYNC_SYNCED,
-            msgType = t?.trim()?.takeIf { it.isNotEmpty() }
+            msgType = t?.trim()?.takeIf { it.isNotEmpty() },
+            blocksJson = (blocks ?: flat.firstNotNullOfOrNull { it.blocks })?.takeIf { it.isNotEmpty() }?.let { Json.encodeToString(it) }
         )
     }
 
+    val pollAppId: String get() = POLL_APP_ID
+
     companion object {
+
+        /** UUID приложения Poll App на этом сервере Rocket.Chat.
+         * Виден в поле `appId` UIKit-блоков любого опроса. */
+        private const val POLL_APP_ID = "c33fa1a6-68a7-491e-bf49-9d7b99671c48"
+
         private fun flattenAttachments(list: List<AttachmentDto?>?): List<AttachmentDto> {
             if (list.isNullOrEmpty()) return emptyList()
             val out = ArrayList<AttachmentDto>()

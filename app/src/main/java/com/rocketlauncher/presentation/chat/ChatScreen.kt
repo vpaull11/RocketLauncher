@@ -57,10 +57,12 @@ import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Forward
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Edit
@@ -189,6 +191,7 @@ fun ChatScreen(
     var showLeaveRoomConfirm by remember { mutableStateOf(false) }
     var showNewDiscussionDialog by remember { mutableStateOf(false) }
     var newDiscussionTitleInput by remember { mutableStateOf("") }
+    var showCreatePollSheet by remember { mutableStateOf(false) }
     var showForwardPicker by remember { mutableStateOf(false) }
     var contextMenuMessage by remember { mutableStateOf<MessageEntity?>(null) }
     var reactMessageId by remember { mutableStateOf<String?>(null) }
@@ -258,6 +261,8 @@ fun ChatScreen(
             viewModel.clearMentionSuggestions()
         }
     }
+
+    val votedPollOptionsMap by viewModel.votedPollOptions.collectAsState()
 
     LaunchedEffect(roomId) { viewModel.loadMessages() }
 
@@ -667,6 +672,10 @@ fun ChatScreen(
                             Toast.makeText(context, context.getString(R.string.toast_link_copied), Toast.LENGTH_SHORT).show()
                         },
                         onReactionClick = { emoji -> viewModel.react(msg.id, emoji) },
+                        onVotePoll = { appId, blockId, actionId, value ->
+                            viewModel.votePoll(msg.id, msg.roomId, appId, blockId, actionId, value)
+                        },
+                        votedPollValues = votedPollOptionsMap.filter { it.startsWith("${msg.id}:") }.map { it.substringAfter(":") }.toSet(),
                         onOpenThread =
                             if (!uiState.isThread &&
                                 msg.tmid.isNullOrBlank() &&
@@ -820,6 +829,16 @@ fun ChatScreen(
                         Icon(
                             Icons.Default.AttachFile,
                             contentDescription = stringResource(R.string.cd_attach_file),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(
+                        onClick = { showCreatePollSheet = true },
+                        enabled = !uiState.isUploading
+                    ) {
+                        Icon(
+                            Icons.Default.Poll,
+                            contentDescription = "Создать опрос",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -1007,6 +1026,15 @@ fun ChatScreen(
             onDismiss = {
                 showForwardPicker = false
                 viewModel.setForwardMessage(null)
+            }
+        )
+    }
+
+    if (showCreatePollSheet) {
+        CreatePollSheet(
+            onDismiss = { showCreatePollSheet = false },
+            onCreate = { question, options, anonymous, multipleChoice ->
+                viewModel.createPoll(question, options, anonymous, multipleChoice)
             }
         )
     }
@@ -2093,6 +2121,8 @@ private fun MessageBubble(
     onFileDownload: (String, String) -> Unit,
     onFileCopyLink: (String) -> Unit,
     onReactionClick: (String) -> Unit,
+    onVotePoll: ((appId: String, blockId: String, actionId: String, value: String) -> Unit)? = null,
+    votedPollValues: Set<String> = emptySet(),
     onOpenThread: (() -> Unit)? = null,
     onOpenDiscussion: (() -> Unit)? = null,
     onUrlClick: (String) -> Boolean = { false }
@@ -2320,6 +2350,17 @@ private fun MessageBubble(
                             )
                         }
                     }
+                }
+
+                if (!message.blocksJson.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    PollBlock(
+                        blocksJson = message.blocksJson,
+                        onVote = { appId, blockId, actionId, value ->
+                            onVotePoll?.invoke(appId, blockId, actionId, value)
+                        },
+                        votedValues = votedPollValues
+                    )
                 }
 
                 if (!isThreadContext && message.tmid.isNullOrBlank()) {

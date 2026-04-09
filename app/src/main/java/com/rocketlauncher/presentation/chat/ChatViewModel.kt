@@ -49,8 +49,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import java.time.LocalDate
@@ -1640,6 +1642,95 @@ class ChatViewModel @Inject constructor(
         return !isDirectChatWithPeer(peerUserId)
     }
 
+    // ── Опросы ──────────────────────────────────────────────────────────────
+
+    /**
+     * Множество ключей `"$msgId:$value"` — варианты, за которые пользователь
+     * проголосовал в текущей сессии. Хранится в памяти (сбрасывается при выходе из чата).
+     * Сервер обновит сообщение через WebSocket, и прогресс-бары обновятся автоматически.
+     */
+    private val _votedPollOptions = MutableStateFlow<Set<String>>(emptySet())
+    val votedPollOptions: StateFlow<Set<String>> = _votedPollOptions.asStateFlow()
+
+    /**
+     * Отправляет голос за вариант опроса через REST `POST /api/apps/ui.interaction/{appId}`.
+     * Ключ оптимистичного состояния: `"$msgId:$value"`.
+     */
+    fun votePoll(
+        msgId: String,
+        votedRoomId: String,
+        appId: String,
+        blockId: String,
+        actionId: String,
+        value: String
+    ) {
+        // Оптимистично помечаем вариант как проголосованный
+        _votedPollOptions.value = _votedPollOptions.value + "$msgId:$value"
+        viewModelScope.launch(Dispatchers.IO) {
+            messageRepository.sendBlockActionRest(
+                appId = appId,
+                actionId = actionId,
+                blockId = blockId,
+                value = value,
+                msgId = msgId,
+                roomId = votedRoomId
+            ).onFailure { e ->
+                // Откатываем оптимистичный голос при ошибке
+                _votedPollOptions.value = _votedPollOptions.value - "$msgId:$value"
+                _uiState.update { it.copy(toastMessage = e.message ?: "Не удалось проголосовать") }
+            }
+        }
+    }
+
+
+    /**
+     * Создаёт опрос через двухшаговый поток:
+     * 1. Вызывает `/poll` через REST → сервер присылает `modal.open` через WebSocket
+     * 2. Из WebSocket-события берём реальные `triggerId` и `viewId`
+     * 3. Отправляем `viewSubmit` с введёнными данными — Poll App создаёт опрос
+     */
+    fun createPoll(
+        question: String,
+        options: List<String>,
+        anonymous: Boolean,
+        multipleChoice: Boolean
+    ) {
+        if (roomId.isBlank() || question.isBlank() || options.size < 2) return
+        viewModelScope.launch(Dispatchers.IO) {
+            // Шаг 1: запускаем /poll — Poll App откроет модальный диалог через WebSocket
+            messageRepository.runSlashCommand(roomId, "poll", "", tmid = null)
+                .onFailure { e ->
+                    _uiState.update { it.copy(toastMessage = e.message ?: "Не удалось запустить /poll") }
+                    return@launch
+                }
+
+            // Шаг 2: ждём событие modal.open от Poll App (до 10 секунд)
+            val event = withTimeoutOrNull(10_000L) {
+                realtimeService.uiInteractionEvents.first()
+            }
+            if (event == null) {
+                _uiState.update { it.copy(toastMessage = "Таймаут: сервер не ответил модальным окном") }
+                return@launch
+            }
+
+            // Шаг 3: отправляем viewSubmit с реальным triggerId
+            messageRepository.submitPollModal(
+                appId = event.triggerId.let { messageRepository.pollAppId },
+                triggerId = event.triggerId,
+                viewId = event.viewId,
+                serverViewJson = event.viewJson,
+                roomId = roomId,
+                question = question,
+                options = options,
+                anonymous = anonymous,
+                multipleChoice = multipleChoice
+            ).onFailure { e ->
+                _uiState.update { it.copy(toastMessage = e.message ?: "Не удалось создать опрос") }
+            }
+        }
+    }
+
+
     override fun onCleared() {
         quoteHighlightJob?.cancel()
         inviteSearchJob?.cancel()
@@ -1649,3 +1740,4 @@ class ChatViewModel @Inject constructor(
         super.onCleared()
     }
 }
+

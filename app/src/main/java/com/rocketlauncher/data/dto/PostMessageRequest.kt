@@ -1,6 +1,7 @@
 package com.rocketlauncher.data.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class PostMessageRequest(
@@ -11,8 +12,14 @@ data class PostMessageRequest(
      * Как в официальном клиенте RC при пересылке: `true`, чтобы разобрать `[ ](permalink)` в `msg`.
      */
     val parseUrls: Boolean? = null,
-    val attachments: List<PostMessageAttachment>? = null
+    val attachments: List<PostMessageAttachment>? = null,
+    /**
+     * UIKit-блоки для интерактивных сообщений (опросы и т.п.).
+     * Передаётся как сырой JSON-массив, чтобы не ломать сериализацию.
+     */
+    val blocks: JsonElement? = null
 )
+
 
 /**
  * Внутренний объект в `attachments[].attachments[]` при пересылке с файлом/картинкой

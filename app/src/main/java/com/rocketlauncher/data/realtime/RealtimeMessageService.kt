@@ -29,8 +29,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -97,6 +100,12 @@ class RealtimeMessageService @Inject constructor(
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     enum class ConnectionState { CONNECTED, CONNECTING, RECONNECTING, DISCONNECTED }
+
+    /** Событие от Apps Engine: открытие модального окна (modal.open / modal.update). */
+    data class UiInteractionEvent(val triggerId: String, val viewId: String, val viewJson: String)
+
+    private val _uiInteractionEvents = MutableSharedFlow<UiInteractionEvent>(extraBufferCapacity = 4)
+    val uiInteractionEvents: SharedFlow<UiInteractionEvent> = _uiInteractionEvents.asSharedFlow()
 
     private val _diagLog = MutableStateFlow<List<String>>(emptyList())
     val diagLog: StateFlow<List<String>> = _diagLog.asStateFlow()
@@ -420,7 +429,10 @@ class RealtimeMessageService @Inject constructor(
         val subId = "notify-user-$userId-${System.currentTimeMillis()}"
         userNotifySubId = subId
         webSocket?.send("""{"msg":"sub","id":"$subId","name":"stream-notify-user","params":["$userId/subscriptions-changed",false]}""")
-        diag("Subscribed to user notifications: $userId")
+        // Подписка на UI-взаимодействия от Apps Engine (открытие модальных окон Poll App и т.п.)
+        val uiSubId = "notify-user-ui-$userId-${System.currentTimeMillis()}"
+        webSocket?.send("""{"msg":"sub","id":"$uiSubId","name":"stream-notify-user","params":["$userId/uiInteraction",false]}""")
+        diag("Subscribed to user notifications + uiInteraction: $userId")
     }
 
     /** Глобальные обновления статусов пользователей (online / away / busy / offline). */
@@ -545,7 +557,15 @@ class RealtimeMessageService @Inject constructor(
                  * Для ответов в треде тоже отсекаем дубликаты до отдельной ветки уведомления.
                  */
                 if (ddpEvent == "changed" && existing != null) {
-                    diag("streamMsg: skip (DDP changed, existing id=${entity.id.take(8)}..)")
+                    // Всегда обновляем запись в БД — Poll App и другие Apps Engine присылают
+                    // «changed» с добавленными blocks/text уже после появления сообщения.
+                    // Мы должны обновить blocksJson/text, но НЕ трогать счётчики unread/notify.
+                    if (merged.blocksJson != existing.blocksJson || merged.text != existing.text) {
+                        messageDao.insert(merged)
+                        diag("streamMsg: changed id=${entity.id.take(8)}.. (blocks/text updated)")
+                    } else {
+                        diag("streamMsg: skip (DDP changed, no content diff, id=${entity.id.take(8)}..)")
+                    }
                     return@launch
                 }
                 /** Повторный `added` по тому же id — не дублируем превью/unread/уведомление. */
@@ -709,6 +729,21 @@ class RealtimeMessageService @Inject constructor(
         if (args == null || args.length() == 0) { diag("userNotify: no args"); return }
 
         when {
+            eventName.endsWith("/uiInteraction") -> {
+                // Apps Engine прислал UI-событие (например, модальный диалог от Poll App)
+                val arg = args.optJSONObject(0) ?: return
+                val type = arg.optString("type")  // "modal.open", "modal.update", etc.
+                if (type == "modal.open" || type == "modal.update") {
+                    val triggerId = arg.optString("triggerId").takeIf { it.isNotBlank() } ?: return
+                    val view = arg.optJSONObject("view") ?: return
+                    val viewId = view.optString("id").takeIf { it.isNotBlank() } ?: return
+                    diag("uiInteraction: type=$type triggerId=${triggerId.take(8)}.. viewId=${viewId.take(8)}..")
+                    scope.launch {
+                        _uiInteractionEvents.emit(UiInteractionEvent(triggerId, viewId, view.toString()))
+                    }
+                }
+                return
+            }
             eventName.endsWith("/subscriptions-changed") -> {
                 val action = args.optString(0)
                 val subscriptionData = args.optJSONObject(1)
@@ -904,6 +939,23 @@ class RealtimeMessageService @Inject constructor(
 
         val cleanedMsg = stripRocketQuotePermalinkMarkdown(rawMsg)
 
+        // UIKit-блоки: опросы и интерактивные сообщения (Poll App, приходят в blocks или attachments[].blocks)
+        var blocksArray = msgObj.optJSONArray("blocks")
+        if (blocksArray == null) {
+            val atts = msgObj.optJSONArray("attachments")
+            if (atts != null && atts.length() > 0) {
+                for (i in 0 until atts.length()) {
+                    val att = atts.optJSONObject(i)
+                    if (att != null && att.has("blocks")) {
+                        blocksArray = att.optJSONArray("blocks")
+                        break
+                    }
+                }
+            }
+        }
+        val blocksJson: String? = if (blocksArray != null && blocksArray.length() > 0)
+            blocksArray.toString() else null
+
         var reactionsJson: String? = null
         val reactionsObj = msgObj.optJSONObject("reactions")
         if (reactionsObj != null && reactionsObj.length() > 0) {
@@ -941,9 +993,55 @@ class RealtimeMessageService @Inject constructor(
             reactions = reactionsJson,
             mentionsJson = mentionsJson,
             syncStatus = MessageEntity.SYNC_SYNCED,
-            msgType = msgTypeRaw
+            msgType = msgTypeRaw,
+            blocksJson = blocksJson
         )
     }
+
+    /**
+     * Отправляет голос за вариант опроса через DDP-метод `ui.blockAction`.
+     * Вызывается из [com.rocketlauncher.presentation.chat.ChatViewModel.votePoll].
+     *
+     * @param msgId    ID сообщения с опросом
+     * @param roomId   ID комнаты
+     * @param appId    appId из блока (обычно "poll" или "poll-plus")
+     * @param blockId  blockId кнопки-варианта
+     * @param actionId actionId кнопки (обычно "vote")
+     * @param value    значение варианта (индекс строкой: "0", "1", …)
+     */
+    fun sendBlockAction(
+        msgId: String,
+        roomId: String,
+        appId: String,
+        blockId: String,
+        actionId: String,
+        value: String
+    ) {
+        val id = "ba-${System.currentTimeMillis()}"
+        // triggerId обязателен для Apps Engine, генерируем уникальный
+        val triggerId = "$id-trigger"
+        val payload = buildString {
+            append("{\"msg\":\"method\",\"method\":\"ui.blockAction\",\"id\":\"$id\",")
+            append("\"params\":[{")
+            append("\"actionId\":\"$actionId\",")
+            append("\"appId\":\"$appId\",")
+            append("\"value\":\"$value\",")
+            append("\"blockId\":\"$blockId\",")
+            append("\"mid\":\"$msgId\",")
+            append("\"rid\":\"$roomId\",")
+            append("\"triggerId\":\"$triggerId\",")
+            append("\"container\":{\"type\":\"message\",\"id\":\"$msgId\"}")
+            append("}]}")
+        }
+        val ws = webSocket
+        if (ws != null) {
+            ws.send(payload)
+            diag("sendBlockAction: appId=$appId actionId=$actionId blockId=${blockId.take(8)}.. value=$value msg=${msgId.take(8)}..")
+        } else {
+            diag("sendBlockAction: no active webSocket")
+        }
+    }
+
 
     private fun parseDdpTimestamp(ts: Any?): Long {
         if (ts == null) return System.currentTimeMillis()

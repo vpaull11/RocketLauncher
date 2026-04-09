@@ -55,4 +55,8 @@ interface MessageDao {
 
     @Query("UPDATE messages SET text = :text, isEdited = :edited WHERE id = :id")
     suspend fun updateMessageText(id: String, text: String, edited: Boolean)
+
+    /** Обновляет только поле blocksJson (для синхронизации результатов голосования из WebSocket/REST). */
+    @Query("UPDATE messages SET blocksJson = :blocksJson WHERE id = :id")
+    suspend fun updateBlocksJson(id: String, blocksJson: String?)
 }

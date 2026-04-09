@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [RoomEntity::class, MessageEntity::class, RoomPinEntity::class],
-    version = 20,
+    version = 21,
     exportSchema = false
 )
 abstract class RocketDatabase : RoomDatabase() {
