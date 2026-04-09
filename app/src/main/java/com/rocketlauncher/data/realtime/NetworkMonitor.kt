@@ -31,7 +31,10 @@ class NetworkMonitor @Inject constructor(
             _isOnline.value = checkCurrentNetwork()
         }
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-            _isOnline.value = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            // NET_CAPABILITY_VALIDATED — Android реально проверил связь (HTTP captive-portal check).
+            // NET_CAPABILITY_INTERNET лишь означает «сеть теоретически может иметь интернет» —
+            // выставляется сразу при подключении к Wi-Fi, даже без реального доступа.
+            _isOnline.value = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         }
     }
 
@@ -53,6 +56,6 @@ class NetworkMonitor @Inject constructor(
     private fun checkCurrentNetwork(): Boolean {
         val active = cm.activeNetwork ?: return false
         val caps = cm.getNetworkCapabilities(active) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 }

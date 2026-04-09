@@ -168,7 +168,9 @@ class RealtimeMessageService @Inject constructor(
             networkMonitor.isOnline.collect { online ->
                 if (online && shouldBeConnected.get() && webSocket == null) {
                     AppLog.d(TAG, "Network restored, reconnecting")
-                    reconnectDelay = RECONNECT_MIN_MS
+                    // Не сбрасываем reconnectDelay: пусть backoff накапливается (до 30 сек).
+                    // Иначе при нестабильной сети каждый переход isOnline=true
+                    // сбрасывает задержку до 1 сек → бесконечный быстрый реконнект → аккумулятор.
                     doConnect()
                 }
             }
