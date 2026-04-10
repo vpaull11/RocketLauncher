@@ -74,7 +74,8 @@ class RealtimeMessageService @Inject constructor(
     private val messageRepository: MessageRepository,
     private val roomRepository: RoomRepository,
     private val userPresenceStore: UserPresenceStore,
-    private val threadParticipationPrefs: ThreadParticipationPrefs
+    private val threadParticipationPrefs: ThreadParticipationPrefs,
+    private val openedChatTracker: com.rocketlauncher.data.notifications.OpenedChatTracker
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -104,7 +105,7 @@ class RealtimeMessageService @Inject constructor(
     /** Событие от Apps Engine: открытие модального окна (modal.open / modal.update). */
     data class UiInteractionEvent(val triggerId: String, val viewId: String, val viewJson: String)
 
-    private val _uiInteractionEvents = MutableSharedFlow<UiInteractionEvent>(extraBufferCapacity = 4)
+    private val _uiInteractionEvents = MutableSharedFlow<UiInteractionEvent>(replay = 5, extraBufferCapacity = 5)
     val uiInteractionEvents: SharedFlow<UiInteractionEvent> = _uiInteractionEvents.asSharedFlow()
 
     private val _diagLog = MutableStateFlow<List<String>>(emptyList())
@@ -652,10 +653,11 @@ class RealtimeMessageService @Inject constructor(
                 }
                 val isoTime = msgObj.opt("ts")?.let { formatIsoTime(it) }
                     ?: Instant.ofEpochMilli(entity.timestamp).toString()
-                val unreadDelta = if (fromSelf) 0 else 1
+                val isViewing = openedChatTracker.isViewingRoom(entity.roomId)
+                val unreadDelta = if (fromSelf || isViewing) 0 else 1
                 val mentionsArr = msgObj.optJSONArray("mentions")
                 val mentionsDelta =
-                    if (fromSelf) 0
+                    if (fromSelf || isViewing) 0
                     else if (mentionsArrayContainsCurrentUser(mentionsArr, myId)) 1
                     else 0
                 roomDao.updateLastMessage(

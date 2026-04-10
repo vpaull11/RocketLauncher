@@ -1,10 +1,12 @@
 package com.rocketlauncher.presentation.navigation
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rocketlauncher.R
 import com.rocketlauncher.data.invite.InviteLinkParser
 import com.rocketlauncher.data.notifications.NotificationConstants
 import com.rocketlauncher.data.repository.AuthRepository
@@ -37,7 +39,8 @@ class NavViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val shareUploadQueue: ShareUploadQueue,
     private val roomRepository: RoomRepository,
-    private val sessionPrefs: SessionPrefs
+    private val sessionPrefs: SessionPrefs,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val _pendingOpenChat = MutableStateFlow<PendingOpenChat?>(null)
@@ -135,14 +138,14 @@ class NavViewModel @Inject constructor(
                 try {
                     val token = InviteLinkParser.extractInviteToken(uri)
                     if (token.isNullOrBlank()) {
-                        _inviteError.value = "Не удалось разобрать ссылку-приглашение"
+                        _inviteError.value = appContext.getString(R.string.error_invite_parse)
                         _pendingInviteUri.value = null
                         return@withLock
                     }
                     val sessionUrl = sessionPrefs.getServerUrl()
                     if (!InviteLinkParser.inviteHostMatchesSession(uri, sessionUrl)) {
                         _inviteError.value =
-                            "Ссылка относится к другому серверу, чем текущий вход"
+                            appContext.getString(R.string.error_invite_wrong_server)
                         _pendingInviteUri.value = null
                         return@withLock
                     }
@@ -157,12 +160,12 @@ class NavViewModel @Inject constructor(
                             _pendingInviteUri.value = null
                         },
                         onFailure = { e ->
-                            _inviteError.value = e.message ?: "Не удалось вступить по ссылке"
+                            _inviteError.value = e.message ?: appContext.getString(R.string.error_invite_join)
                             _pendingInviteUri.value = null
                         }
                     )
                 } catch (e: Exception) {
-                    _inviteError.value = e.message ?: "Не удалось вступить по ссылке"
+                    _inviteError.value = e.message ?: appContext.getString(R.string.error_invite_join)
                     _pendingInviteUri.value = null
                 }
             }

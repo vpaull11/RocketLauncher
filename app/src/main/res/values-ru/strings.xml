@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RocketLauncher</string>
+
+    <!-- Generic actions -->
     <string name="action_ok">OK</string>
     <string name="action_cancel">Отмена</string>
     <string name="action_close">Закрыть</string>
     <string name="action_back">Назад</string>
-    <string name="action_copy">Скопировать</string>
+    <string name="action_copy">Копировать</string>
     <string name="action_confirm">Подтвердить</string>
     <string name="action_more">Ещё</string>
     <string name="action_search">Поиск</string>
@@ -13,11 +15,80 @@
     <string name="action_create">Создать</string>
     <string name="action_exit">Выйти</string>
     <string name="action_insert">Вставить</string>
+    <string name="action_select_all">Выбрать все</string>
+    <string name="action_cut">Вырезать</string>
+    <string name="action_paste">Вставить</string>
+    <string name="action_refresh">Обновить</string>
+    <string name="action_invite">Пригласить</string>
+    <string name="action_bold">Жирный</string>
+    <string name="action_italic">Курсив</string>
+    <string name="action_strikethrough">Зачёркнутый</string>
+    <string name="action_code">Код</string>
+    <string name="action_code_block">Блок кода</string>
+    <string name="action_link">Ссылка</string>
+
+    <!-- Generic errors -->
     <string name="error_generic">Ошибка</string>
     <string name="error_generic_with_message">Ошибка: %1$s</string>
+    <string name="error_invite_parse">Не удалось разобрать ссылку-приглашение</string>
+    <string name="error_invite_wrong_server">Ссылка относится к другому серверу, чем текущий вход</string>
+    <string name="error_invite_join">Не удалось вступить по ссылке</string>
+
+    <!-- Generic defaults/fallbacks -->
     <string name="default_room_chat">Чат</string>
     <string name="default_thread">Тред</string>
     <string name="default_discussion">Обсуждение</string>
     <string name="default_participant">Участник</string>
     <string name="default_username_fallback">Пользователь</string>
+    <string name="default_separator"> · </string>
+
+    <!-- Composer -->
+    <string name="composer_placeholder_text">текст</string>
+    <string name="composer_placeholder_code">код</string>
+
+    <!-- Markdown toolbar content descriptions -->
+    <string name="cd_format_bold">Жирный</string>
+    <string name="cd_format_italic">Курсив</string>
+    <string name="cd_format_strikethrough">Зачёркнутый</string>
+    <string name="cd_format_code_inline">Код в строке</string>
+    <string name="cd_format_code_block">Блок кода</string>
+    <string name="cd_format_link">Ссылка</string>
+
+    <!-- Poll creation sheet -->
+    <string name="poll_create_title">Создать опрос</string>
+    <string name="poll_question_label">Вопрос</string>
+    <string name="poll_question_placeholder">Введите вопрос…</string>
+    <string name="poll_options_section">Варианты ответа</string>
+    <string name="poll_option_number">Вариант %1$d</string>
+    <string name="poll_option_delete_cd">Удалить вариант</string>
+    <string name="poll_add_option">Добавить вариант</string>
+    <string name="poll_anonymous_label">Анонимное голосование</string>
+    <string name="poll_anonymous_subtitle">Имена участников скрыты</string>
+    <string name="poll_multiple_label">Множественный выбор</string>
+    <string name="poll_multiple_subtitle">Можно выбрать несколько вариантов</string>
+    <string name="poll_vote_button">Голосовать</string>
+    <string name="poll_label">Опрос</string>
+    <string name="poll_submit_button">Проголосовать</string>
+    <string name="poll_revote_button">Переголосовать</string>
+    <string name="poll_view_votes">Посмотреть голоса (%1$d)</string>
+
+    <!-- User profile bottom sheet -->
+    <string name="profile_field_status">Статус</string>
+    <string name="profile_field_bio">О себе</string>
+    <string name="profile_field_nickname">Псевдоним</string>
+    <string name="profile_action_message">Личные сообщения</string>
+    <string name="profile_action_call">Звонок</string>
+    <string name="profile_already_open_hint">Личный чат уже открыт — можно сразу позвонить.</string>
+    <string name="profile_loading">Загрузка профиля…</string>
+
+    <!-- Chat room members sheet -->
+    <string name="members_title">Участники</string>
+    <string name="members_need_admin">Нужны права администратора на сервере.</string>
+    <string name="members_action_remove">Удалить из комнаты</string>
+    <string name="members_action_set_owner">Сделать владельцем</string>
+    <string name="members_action_set_moderator">Сделать модератором</string>
+    <string name="members_action_set_leader">Сделать лидером</string>
+    <string name="members_action_mute">Замутить</string>
+    <string name="members_action_invite_title">Пригласить участника</string>
+    <string name="members_search_hint">Поиск по @username</string>
 </resources>

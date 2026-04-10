@@ -56,8 +56,8 @@ android {
         applicationId = "com.rocketlauncher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.1.0"
+        versionCode = 8
+        versionName = "1.1.1"
     }
 
     signingConfigs {

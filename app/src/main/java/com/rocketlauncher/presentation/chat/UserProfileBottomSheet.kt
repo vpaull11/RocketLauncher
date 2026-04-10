@@ -27,8 +27,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.rocketlauncher.R
 import com.rocketlauncher.data.realtime.UserPresenceStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +86,7 @@ fun UserProfileBottomSheet(
                         ?: state.details?.nickname?.takeIf { it.isNotBlank() }
                         ?: state.fallbackName?.takeIf { it.isNotBlank() }
                         ?: username
-                        ?: "Пользователь"
+                        ?: stringResource(R.string.default_username_fallback)
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineSmall,
@@ -106,10 +108,10 @@ fun UserProfileBottomSheet(
 
                 val d = state.details
                 if (d != null) {
-                    ProfileField("Статус", listOfNotNull(d.status, d.statusText?.takeIf { it.isNotBlank() }).joinToString(" · ").takeIf { it.isNotBlank() })
-                    ProfileField("О себе", d.bio?.takeIf { it.isNotBlank() })
+                    ProfileField(stringResource(R.string.profile_field_status), listOfNotNull(d.status, d.statusText?.takeIf { it.isNotBlank() }).joinToString(stringResource(R.string.default_separator)).takeIf { it.isNotBlank() })
+                    ProfileField(stringResource(R.string.profile_field_bio), d.bio?.takeIf { it.isNotBlank() })
                     d.emails?.firstOrNull()?.address?.takeIf { it.isNotBlank() }?.let { ProfileField("Email", it) }
-                    d.nickname?.takeIf { it.isNotBlank() && it != d.name }?.let { ProfileField("Псевдоним", it) }
+                    d.nickname?.takeIf { it.isNotBlank() && it != d.name }?.let { ProfileField(stringResource(R.string.profile_field_nickname), it) }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -122,7 +124,7 @@ fun UserProfileBottomSheet(
                             onClick = onOpenDirectChat,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Личные сообщения", maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(stringResource(R.string.profile_action_message), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     Button(
@@ -131,12 +133,12 @@ fun UserProfileBottomSheet(
                     ) {
                         Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Звонок")
+                        Text(stringResource(R.string.profile_action_call))
                     }
                 }
                 if (!showDirectChatButton) {
                     Text(
-                        text = "Личный чат уже открыт — можно сразу позвонить.",
+                        text = stringResource(R.string.profile_already_open_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
@@ -158,7 +160,7 @@ private fun BoxCenteredLoading() {
     ) {
         CircularProgressIndicator(modifier = Modifier.size(40.dp))
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Загрузка профиля…", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.profile_loading), style = MaterialTheme.typography.bodyMedium)
     }
 }
 

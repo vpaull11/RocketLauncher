@@ -26,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.rocketlauncher.R
 
 /**
  * Оборачивает выделение в markdown ([MessageFormatter]): *жирный*, _курсив_, ~зачёркнутый~, `код`, блок ```.
@@ -92,13 +94,13 @@ fun ComposerFormattingToolbar(
         horizontalArrangement = Arrangement.Start
     ) {
         IconButton(onClick = onBold, enabled = enabled, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.FormatBold, contentDescription = "Жирный", tint = tint, modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.FormatBold, contentDescription = stringResource(R.string.cd_format_bold), tint = tint, modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = onItalic, enabled = enabled, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.FormatItalic, contentDescription = "Курсив", tint = tint, modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.FormatItalic, contentDescription = stringResource(R.string.cd_format_italic), tint = tint, modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = onStrike, enabled = enabled, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.StrikethroughS, contentDescription = "Зачёркнутый", tint = tint, modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.StrikethroughS, contentDescription = stringResource(R.string.cd_format_strikethrough), tint = tint, modifier = Modifier.size(22.dp))
         }
         Box(
             modifier = Modifier
@@ -108,13 +110,13 @@ fun ComposerFormattingToolbar(
                 .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
         )
         IconButton(onClick = onInlineCode, enabled = enabled, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.Code, contentDescription = "Код в строке", tint = tint, modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.Code, contentDescription = stringResource(R.string.cd_format_code_inline), tint = tint, modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = onCodeBlock, enabled = enabled, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.DataObject, contentDescription = "Блок кода", tint = tint, modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.DataObject, contentDescription = stringResource(R.string.cd_format_code_block), tint = tint, modifier = Modifier.size(22.dp))
         }
         IconButton(onClick = onLink, enabled = enabled, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.Link, contentDescription = "Ссылка", tint = tint, modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.Link, contentDescription = stringResource(R.string.cd_format_link), tint = tint, modifier = Modifier.size(22.dp))
         }
     }
 }

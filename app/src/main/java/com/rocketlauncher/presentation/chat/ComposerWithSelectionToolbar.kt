@@ -1,6 +1,7 @@
 package com.rocketlauncher.presentation.chat
 
 import android.content.Context
+import com.rocketlauncher.R
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
@@ -71,7 +72,7 @@ fun ComposerWithSelectionToolbar(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onRequestLinkDialog: (ComposerLinkDialogState) -> Unit,
-    hintText: String = "Сообщение..."
+    hintText: String = ""
 ) {
     val density = LocalDensity.current
     val onSurfaceArgb = MaterialTheme.colorScheme.onSurface.toArgb()
@@ -196,18 +197,18 @@ private fun syncComposerToEditText(
     guard.skip = false
 }
 
-private fun populateComposerSelectionMenu(menu: Menu) {
+private fun populateComposerSelectionMenu(menu: Menu, ctx: Context) {
     menu.clear()
-    menu.add(0, android.R.id.selectAll, 0, "Выбрать все")
-    menu.add(0, android.R.id.cut, 1, "Вырезать")
-    menu.add(0, android.R.id.copy, 2, "Копировать")
-    menu.add(0, android.R.id.paste, 3, "Вставить")
-    menu.add(0, MENU_BOLD, 10, "Жирный")
-    menu.add(0, MENU_ITALIC, 11, "Курсив")
-    menu.add(0, MENU_STRIKE, 12, "Зачёркнутый")
-    menu.add(0, MENU_INLINE_CODE, 13, "Код")
-    menu.add(0, MENU_CODE_BLOCK, 14, "Блок кода")
-    menu.add(0, MENU_LINK, 15, "Ссылка")
+    menu.add(0, android.R.id.selectAll, 0, ctx.getString(R.string.action_select_all))
+    menu.add(0, android.R.id.cut, 1, ctx.getString(R.string.action_cut))
+    menu.add(0, android.R.id.copy, 2, ctx.getString(R.string.action_copy))
+    menu.add(0, android.R.id.paste, 3, ctx.getString(R.string.action_paste))
+    menu.add(0, MENU_BOLD, 10, ctx.getString(R.string.action_bold))
+    menu.add(0, MENU_ITALIC, 11, ctx.getString(R.string.action_italic))
+    menu.add(0, MENU_STRIKE, 12, ctx.getString(R.string.action_strikethrough))
+    menu.add(0, MENU_INLINE_CODE, 13, ctx.getString(R.string.action_code))
+    menu.add(0, MENU_CODE_BLOCK, 14, ctx.getString(R.string.action_code_block))
+    menu.add(0, MENU_LINK, 15, ctx.getString(R.string.action_link))
 }
 
 private fun buildSelectionCallback(
@@ -216,29 +217,29 @@ private fun buildSelectionCallback(
 ): ActionMode.Callback = object : ActionMode.Callback {
     override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean {
         if (menu == null) return false
-        populateComposerSelectionMenu(menu)
+        populateComposerSelectionMenu(menu, et.context)
         return true
     }
 
     override fun onPrepareActionMode(mode: ActionMode?, menu: Menu?): Boolean {
-        // После onCreate система может снова добавить Копировать/Вырезать — пересобираем один раз.
-        menu?.let { populateComposerSelectionMenu(it) }
+        menu?.let { populateComposerSelectionMenu(it, et.context) }
         return true
     }
 
     override fun onActionItemClicked(mode: ActionMode?, item: MenuItem?): Boolean {
         if (item == null) return false
         return when (item.itemId) {
-            MENU_BOLD -> applyMarkdownWrap(et, holder, mode, "*", "*", "текст")
-            MENU_ITALIC -> applyMarkdownWrap(et, holder, mode, "_", "_", "текст")
-            MENU_STRIKE -> applyMarkdownWrap(et, holder, mode, "~", "~", "текст")
-            MENU_INLINE_CODE -> applyMarkdownWrap(et, holder, mode, "`", "`", "код")
-            MENU_CODE_BLOCK -> applyMarkdownWrap(et, holder, mode, "```\n", "\n```", "код")
+            MENU_BOLD -> applyMarkdownWrap(et, holder, mode, "*", "*", et.context.getString(R.string.composer_placeholder_text))
+            MENU_ITALIC -> applyMarkdownWrap(et, holder, mode, "_", "_", et.context.getString(R.string.composer_placeholder_text))
+            MENU_STRIKE -> applyMarkdownWrap(et, holder, mode, "~", "~", et.context.getString(R.string.composer_placeholder_text))
+            MENU_INLINE_CODE -> applyMarkdownWrap(et, holder, mode, "`", "`", et.context.getString(R.string.composer_placeholder_code))
+            MENU_CODE_BLOCK -> applyMarkdownWrap(et, holder, mode, "```\n", "\n```", et.context.getString(R.string.composer_placeholder_code))
             MENU_LINK -> {
                 val s = minOf(et.selectionStart, et.selectionEnd)
                 val e = maxOf(et.selectionStart, et.selectionEnd)
                 val str = et.text?.toString().orEmpty()
-                val label = if (s != e && s in str.indices && e <= str.length) str.substring(s, e) else "текст"
+                val label = if (s != e && s in str.indices && e <= str.length) str.substring(s, e)
+                    else et.context.getString(R.string.composer_placeholder_text)
                 mode?.finish()
                 holder.onRequestLinkDialog(ComposerLinkDialogState(s, e, label))
                 true

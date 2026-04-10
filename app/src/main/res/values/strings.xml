@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RocketLauncher</string>
+
+    <!-- Generic actions -->
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_close">Close</string>
@@ -13,11 +15,80 @@
     <string name="action_create">Create</string>
     <string name="action_exit">Leave</string>
     <string name="action_insert">Insert</string>
+    <string name="action_select_all">Select all</string>
+    <string name="action_cut">Cut</string>
+    <string name="action_paste">Paste</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_invite">Invite</string>
+    <string name="action_bold">Bold</string>
+    <string name="action_italic">Italic</string>
+    <string name="action_strikethrough">Strikethrough</string>
+    <string name="action_code">Code</string>
+    <string name="action_code_block">Code block</string>
+    <string name="action_link">Link</string>
+
+    <!-- Generic errors -->
     <string name="error_generic">Error</string>
     <string name="error_generic_with_message">Error: %1$s</string>
+    <string name="error_invite_parse">Failed to parse invite link</string>
+    <string name="error_invite_wrong_server">Link belongs to a different server than the current session</string>
+    <string name="error_invite_join">Failed to join via link</string>
+
+    <!-- Generic defaults/fallbacks -->
     <string name="default_room_chat">Chat</string>
     <string name="default_thread">Thread</string>
     <string name="default_discussion">Discussion</string>
     <string name="default_participant">Member</string>
     <string name="default_username_fallback">User</string>
+    <string name="default_separator"> · </string>
+
+    <!-- Composer -->
+    <string name="composer_placeholder_text">text</string>
+    <string name="composer_placeholder_code">code</string>
+
+    <!-- Markdown toolbar content descriptions -->
+    <string name="cd_format_bold">Bold</string>
+    <string name="cd_format_italic">Italic</string>
+    <string name="cd_format_strikethrough">Strikethrough</string>
+    <string name="cd_format_code_inline">Inline code</string>
+    <string name="cd_format_code_block">Code block</string>
+    <string name="cd_format_link">Link</string>
+
+    <!-- Poll creation sheet -->
+    <string name="poll_create_title">Create poll</string>
+    <string name="poll_question_label">Question</string>
+    <string name="poll_question_placeholder">Enter question…</string>
+    <string name="poll_options_section">Answer options</string>
+    <string name="poll_option_number">Option %1$d</string>
+    <string name="poll_option_delete_cd">Delete option</string>
+    <string name="poll_add_option">Add option</string>
+    <string name="poll_anonymous_label">Anonymous voting</string>
+    <string name="poll_anonymous_subtitle">Participants\' names are hidden</string>
+    <string name="poll_multiple_label">Multiple choice</string>
+    <string name="poll_multiple_subtitle">Allow selecting multiple options</string>
+    <string name="poll_vote_button">Vote</string>
+    <string name="poll_label">Poll</string>
+    <string name="poll_submit_button">Vote</string>
+    <string name="poll_revote_button">Change vote</string>
+    <string name="poll_view_votes">View votes (%1$d)</string>
+
+    <!-- User profile bottom sheet -->
+    <string name="profile_field_status">Status</string>
+    <string name="profile_field_bio">About</string>
+    <string name="profile_field_nickname">Nickname</string>
+    <string name="profile_action_message">Direct message</string>
+    <string name="profile_action_call">Call</string>
+    <string name="profile_already_open_hint">Direct chat is already open — you can call right away.</string>
+    <string name="profile_loading">Loading profile…</string>
+
+    <!-- Chat room members sheet -->
+    <string name="members_title">Members</string>
+    <string name="members_need_admin">You need admin rights on the server.</string>
+    <string name="members_action_remove">Remove from room</string>
+    <string name="members_action_set_owner">Make owner</string>
+    <string name="members_action_set_moderator">Make moderator</string>
+    <string name="members_action_set_leader">Make leader</string>
+    <string name="members_action_mute">Mute</string>
+    <string name="members_action_invite_title">Invite participant</string>
+    <string name="members_search_hint">Search by @username</string>
 </resources>

@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import java.time.LocalDate
 import java.time.ZoneId
@@ -1697,17 +1698,26 @@ class ChatViewModel @Inject constructor(
     ) {
         if (roomId.isBlank() || question.isBlank() || options.size < 2) return
         viewModelScope.launch(Dispatchers.IO) {
-            // Шаг 1: запускаем /poll — Poll App откроет модальный диалог через WebSocket
-            messageRepository.runSlashCommand(roomId, "poll", "", tmid = null)
+            // Генерируем свой triggerId для запуска команды (как делает веб-клиент)
+            val expectedTriggerId = java.util.UUID.randomUUID().toString().replace("-", "").take(17)
+
+            // НАЧИНАЕМ СЛУШАТЬ ДО ОТПРАВКИ КОМАНДЫ (Race Condition Fix)
+            val eventDeferred = async {
+                withTimeoutOrNull(10_000L) {
+                    realtimeService.uiInteractionEvents.first { it.triggerId == expectedTriggerId }
+                }
+            }
+
+            // Шаг 1: запускаем /poll с нашим triggerId — Poll App откроет диалог через WebSocket
+            messageRepository.runSlashCommand(roomId, "poll", "", tmid = null, triggerId = expectedTriggerId)
                 .onFailure { e ->
                     _uiState.update { it.copy(toastMessage = e.message ?: "Не удалось запустить /poll") }
+                    eventDeferred.cancel()
                     return@launch
                 }
 
-            // Шаг 2: ждём событие modal.open от Poll App (до 10 секунд)
-            val event = withTimeoutOrNull(10_000L) {
-                realtimeService.uiInteractionEvents.first()
-            }
+            // Шаг 2: ждём событие modal.open от Poll App с нашим triggerId (до 10 секунд)
+            val event = eventDeferred.await()
             if (event == null) {
                 _uiState.update { it.copy(toastMessage = "Таймаут: сервер не ответил модальным окном") }
                 return@launch

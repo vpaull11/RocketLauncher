@@ -229,9 +229,9 @@ interface RocketChatApi {
     @POST("api/v1/chat.react")
     suspend fun reactToMessage(@Body request: ReactRequest): ReactResponse
 
-    /** API для запуска слэш-команд (например, /poll) */
-    @POST("api/v1/commands.run")
-    suspend fun runCommand(@Body request: Map<String, String>): GenericResponse
+    /** API для запуска слэш-команд как это делает веб-клиент (костыль через метод DDP обернутый в REST) */
+    @POST("api/v1/method.call/slashCommand")
+    suspend fun callSlashCommandMethod(@Body request: kotlinx.serialization.json.JsonObject): okhttp3.ResponseBody
 
     /**
      * Apps Engine UI-взаимодействие: blockAction (голосование в опросе) и viewSubmit (создание опроса).

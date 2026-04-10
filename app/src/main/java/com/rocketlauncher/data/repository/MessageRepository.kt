@@ -52,6 +52,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.add
 
 private const val TAG = "MessageRepo"
 
@@ -304,22 +307,50 @@ class MessageRepository @Inject constructor(
         }
     }
 
-    suspend fun runSlashCommand(roomId: String, command: String, params: String, tmid: String? = null): Result<Unit> {
+    suspend fun runSlashCommand(roomId: String, command: String, params: String, tmid: String? = null, triggerId: String? = null): Result<Unit> {
         val api = apiProvider.getApi() ?: return Result.failure(Exception("Not logged in"))
         return try {
-            val body = mutableMapOf(
-                "command" to command,
-                "params" to params,
-                "roomId" to roomId
-            )
-            if (tmid != null) body["tmid"] = tmid
-            Log.d(TAG, "runSlashCommand: command=$command roomId=$roomId params=[$params]")
-            val response = api.runCommand(body)
-            Log.d(TAG, "runSlashCommand response: success=${response.success} error=${response.error}")
-            if (response.success) {
+            val msgId = java.util.UUID.randomUUID().toString().replace("-", "").take(17)
+            val ddpCallId = java.util.UUID.randomUUID().toString().replace("-", "").take(8)
+
+            val innerMsg = buildJsonObject {
+                put("_id", msgId)
+                put("rid", roomId)
+                put("msg", "/$command")
+                if (tmid != null) put("tmid", tmid)
+            }
+
+            val cmdParam = buildJsonObject {
+                put("cmd", command)
+                put("params", params)
+                put("msg", innerMsg)
+                if (triggerId != null) put("triggerId", triggerId)
+            }
+
+            val methodCall = buildJsonObject {
+                put("msg", "method")
+                put("id", ddpCallId)
+                put("method", "slashCommand")
+                putJsonArray("params") {
+                    add(cmdParam)
+                }
+            }
+
+            val requestBody = buildJsonObject {
+                put("message", methodCall.toString())
+            }
+
+            Log.d(TAG, "runSlashCommand: command=$command roomId=$roomId params=[$params] triggerId=$triggerId")
+            val responseString = api.callSlashCommandMethod(requestBody).string()
+            Log.d(TAG, "runSlashCommand response: $responseString")
+            
+            val parsed = try { Json.parseToJsonElement(responseString) as? kotlinx.serialization.json.JsonObject } catch(e: Exception) { null }
+            val success = parsed?.get("success")?.let { it == kotlinx.serialization.json.JsonPrimitive(true) } ?: false
+
+            if (success) {
                 Result.success(Unit)
             } else {
-                Result.failure(Exception(response.error ?: "Failed to run command"))
+                Result.failure(Exception("Failed to run command: $responseString"))
             }
         } catch (e: Exception) {
             Log.e(TAG, "runSlashCommand failed: ${e.message}", e)
@@ -427,7 +458,6 @@ class MessageRepository @Inject constructor(
                 }
                 put("viewId", viewId)
                 put("triggerId", triggerId)
-                put("rid", roomId)
             }
 
             val responseBody = api.sendUiInteraction(appId, body).string()

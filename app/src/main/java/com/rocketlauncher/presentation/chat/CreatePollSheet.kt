@@ -40,10 +40,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import com.rocketlauncher.R
 import kotlinx.coroutines.launch
 
 private const val MAX_OPTIONS = 10
@@ -110,7 +112,7 @@ fun CreatePollSheet(
         ) {
             // Заголовок
             Text(
-                text = "Создать опрос",
+                text = stringResource(R.string.poll_create_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -119,8 +121,8 @@ fun CreatePollSheet(
             OutlinedTextField(
                 value = question,
                 onValueChange = { question = it },
-                label = { Text("Вопрос") },
-                placeholder = { Text("Введите вопрос…") },
+                label = { Text(stringResource(R.string.poll_question_label)) },
+                placeholder = { Text(stringResource(R.string.poll_question_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
@@ -133,7 +135,7 @@ fun CreatePollSheet(
             // Варианты ответа
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Варианты ответа",
+                    text = stringResource(R.string.poll_options_section),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -145,7 +147,7 @@ fun CreatePollSheet(
                         OutlinedTextField(
                             value = optionText,
                             onValueChange = { options[idx] = it },
-                            label = { Text("Вариант ${idx + 1}") },
+                            label = { Text(stringResource(R.string.poll_option_number, idx + 1)) },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Sentences,
@@ -161,7 +163,7 @@ fun CreatePollSheet(
                                     ) {
                                         Icon(
                                             Icons.Default.Close,
-                                            contentDescription = "Удалить вариант",
+                                            contentDescription = stringResource(R.string.poll_option_delete_cd),
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -183,7 +185,7 @@ fun CreatePollSheet(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text("Добавить вариант")
+                        Text(stringResource(R.string.poll_add_option))
                     }
                 }
             }
@@ -199,11 +201,11 @@ fun CreatePollSheet(
                 ) {
                     Column {
                         Text(
-                            text = "Анонимное голосование",
+                            text = stringResource(R.string.poll_anonymous_label),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "Имена участников скрыты",
+                            text = stringResource(R.string.poll_anonymous_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -221,11 +223,11 @@ fun CreatePollSheet(
                 ) {
                     Column {
                         Text(
-                            text = "Множественный выбор",
+                            text = stringResource(R.string.poll_multiple_label),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "Можно выбрать несколько вариантов",
+                            text = stringResource(R.string.poll_multiple_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -247,7 +249,7 @@ fun CreatePollSheet(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.action_cancel))
                 }
                 Button(
                     onClick = {
@@ -259,7 +261,7 @@ fun CreatePollSheet(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Создать")
+                    Text(stringResource(R.string.action_create))
                 }
             }
 
