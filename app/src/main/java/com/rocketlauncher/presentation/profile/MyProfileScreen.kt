@@ -50,6 +50,7 @@ private val STATUS_OPTIONS = listOf(
 @Composable
 fun MyProfileScreen(
     onBack: () -> Unit,
+    onOpenDiagnostics: (() -> Unit)? = null,
     viewModel: MyProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -191,6 +192,14 @@ fun MyProfileScreen(
                                 stringResource(R.string.profile_save)
                             }
                         )
+                    }
+                    if (onOpenDiagnostics != null) {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = onOpenDiagnostics,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Диагностика")
+                        }
                     }
                 }
             }

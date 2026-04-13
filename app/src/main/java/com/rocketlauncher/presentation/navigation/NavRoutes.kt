@@ -5,6 +5,7 @@ object NavRoutes {
     const val ROOMS = "rooms"
     const val GLOBAL_SEARCH = "global_search"
     const val MY_PROFILE = "my_profile"
+    const val DIAGNOSTICS = "diagnostics"
     const val CHAT =
         "chat/{roomId}/{roomName}/{roomType}/{avatarPath}?tmid={tmid}&threadTitle={threadTitle}&highlightMsg={highlightMsg}"
 

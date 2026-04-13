@@ -9,6 +9,7 @@ import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
 import com.rocketlauncher.data.notifications.AppForegroundState
 import com.rocketlauncher.data.repository.AuthRepository
+import com.rocketlauncher.util.CrashLogger
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -22,6 +23,9 @@ class RocketLauncherApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        // Инициализация логгера ошибок — перехватывает UncaughtException,
+        // пишет в файл crash_log.txt даже в release-сборке
+        CrashLogger.init(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
                 appForegroundState.setForeground(true)

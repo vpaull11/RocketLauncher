@@ -240,7 +240,8 @@ Enum со всеми типами системных сообщений Rocket.C
 | `chat/` | `ChatScreen.kt` | `ChatViewModel.kt` | Экран чата (~111 КБ + ~72 КБ — самые крупные файлы) |
 | `threads/` | `ThreadListScreen.kt` | `ThreadListViewModel.kt` | Список тредов комнаты |
 | `search/` | `GlobalSearchScreen.kt` | `GlobalSearchViewModel.kt` | Глобальный поиск по чатам |
-| `profile/` | `MyProfileScreen.kt` | `MyProfileViewModel.kt` | Профиль пользователя, смена аватара |
+| `profile/` | `MyProfileScreen.kt` | `MyProfileViewModel.kt` | Профиль пользователя, смена аватара; кнопка входа в диагностику |
+| `diagnostics/` | `DiagnosticsScreen.kt` | `DiagnosticsViewModel.kt` | Экран диагностики: WS-статус, лог ошибок, шаринг лога |
 | `jitsi/` | `IncomingCallActivity.kt` | — | Экран входящего звонка (отдельная Activity) |
 
 ### Навигация (`presentation/navigation/`)
@@ -294,7 +295,8 @@ Enum со всеми типами системных сообщений Rocket.C
 ### `util/`
 | Файл | Назначение |
 |---|---|
-| `AppLog.kt` | Обёртка над `Log` — включает логи только в debug-режиме |
+| `AppLog.kt` | Обёртка над `Log` — `d`/`w` только в debug, `e` (error) — всегда, пишет в CrashLogger |
+| `CrashLogger.kt` | Сохраняет ошибки и UncaughtException в `files/crash_log.txt`; инициализируется в `Application.onCreate` |
 | `SemVer.kt` | Парсинг и сравнение версий для проверки обновлений приложения |
 
 ---
@@ -369,4 +371,6 @@ run-emulator-release.bat
 3. **Новый экран** → добавить маршрут в `NavRoutes.kt` и `composable()` в `RocketNavHost.kt`.
 4. **Новая зависимость** → добавить в `app/build.gradle.kts`, обновить версию в `VERSIONING.md`.
 5. **Новое разрешение** → добавить в `AndroidManifest.xml` и обработать runtime-запрос в `MainActivity`.
-6. **Логирование** → использовать только `AppLog`, никогда прямой `android.util.Log`.
+6. **Логирование** → использовать `AppLog.d/w` для info/warning, `AppLog.e` для ошибок (пишет в release-сборке и в `crash_log.txt`). Никогда прямой `android.util.Log`.
+7. **Диагностика при крашах** → установить debug-сборку, подключить ADB, запустить `collect-logs.bat`.
+   Или открыть Профиль → Диагностика прямо в приложении.

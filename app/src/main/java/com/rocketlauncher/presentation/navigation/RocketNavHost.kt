@@ -20,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.rocketlauncher.data.invite.InviteLinkParser
 import com.rocketlauncher.presentation.chat.ChatScreen
+import com.rocketlauncher.presentation.diagnostics.DiagnosticsScreen
 import com.rocketlauncher.presentation.login.LoginScreen
 import com.rocketlauncher.presentation.rooms.RoomListScreen
 import com.rocketlauncher.presentation.profile.MyProfileScreen
@@ -126,7 +127,13 @@ fun RocketNavHost(
             )
         }
         composable(NavRoutes.MY_PROFILE) {
-            MyProfileScreen(onBack = { navController.popBackStack() })
+            MyProfileScreen(
+                onBack = { navController.popBackStack() },
+                onOpenDiagnostics = { navController.navigate(NavRoutes.DIAGNOSTICS) }
+            )
+        }
+        composable(NavRoutes.DIAGNOSTICS) {
+            DiagnosticsScreen(onBack = { navController.popBackStack() })
         }
         composable(NavRoutes.GLOBAL_SEARCH) {
             GlobalSearchScreen(
