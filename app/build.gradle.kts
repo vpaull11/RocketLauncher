@@ -1,5 +1,6 @@
 import java.io.FileInputStream
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("com.android.application")
@@ -100,13 +101,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-Xannotation-default-target=param-property",
-            "-opt-in=kotlinx.serialization.ExperimentalSerializationApi"
-        )
-    }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -176,4 +170,15 @@ dependencies {
     // Firebase (optional, для push)
     // implementation(platform("com.google.firebase:firebase-bom:32.5.0"))
     // implementation("com.google.firebase:firebase-messaging-ktx")
+}
+
+// Kotlin compiler options — used instead of deprecated kotlinOptions{} inside android{}
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.addAll(
+            "-Xannotation-default-target=param-property",
+            "-opt-in=kotlinx.serialization.ExperimentalSerializationApi"
+        )
+    }
 }

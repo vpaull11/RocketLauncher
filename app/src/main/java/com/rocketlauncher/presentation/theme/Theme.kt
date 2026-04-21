@@ -54,7 +54,9 @@ fun RocketLauncherTheme(
         SideEffect {
             val window = (view.context as Activity).window
             val surface = colorScheme.surface.toArgb()
+            @Suppress("DEPRECATION")
             window.statusBarColor = surface
+            @Suppress("DEPRECATION")
             window.navigationBarColor = surface
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = !darkTheme
