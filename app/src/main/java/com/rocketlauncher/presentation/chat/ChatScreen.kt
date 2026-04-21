@@ -192,6 +192,7 @@ fun ChatScreen(
     var showNewDiscussionDialog by remember { mutableStateOf(false) }
     var newDiscussionTitleInput by remember { mutableStateOf("") }
     var showCreatePollSheet by remember { mutableStateOf(false) }
+    var showAttachPicker by remember { mutableStateOf(false) }
     var showForwardPicker by remember { mutableStateOf(false) }
     var contextMenuMessage by remember { mutableStateOf<MessageEntity?>(null) }
     var reactMessageId by remember { mutableStateOf<String?>(null) }
@@ -338,6 +339,13 @@ fun ChatScreen(
             onLeaveChat()
             viewModel.consumeNavigateBackAfterLeave()
         }
+    }
+
+    // Если отправка не удалась — вернуть текст в composer для повторной попытки
+    LaunchedEffect(uiState.sendFailedText) {
+        val failed = uiState.sendFailedText ?: return@LaunchedEffect
+        updateComposer(TextFieldValue(failed, TextRange(failed.length)))
+        viewModel.consumeSendFailedText()
     }
 
     LaunchedEffect(uiState.pendingOpenRoom) {
@@ -818,38 +826,33 @@ fun ChatScreen(
                         }
                     }
                 }
+                // === Telegram-style composer row ===
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    IconButton(
-                        onClick = { pickFileLauncher.launch(arrayOf("*/*")) },
-                        enabled = !uiState.isUploading
-                    ) {
-                        Icon(
-                            Icons.Default.AttachFile,
-                            contentDescription = stringResource(R.string.cd_attach_file),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(
-                        onClick = { showCreatePollSheet = true },
-                        enabled = !uiState.isUploading
-                    ) {
-                        Icon(
-                            Icons.Default.Poll,
-                            contentDescription = "Создать опрос",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    // Emoji button (left, outside the field)
                     IconButton(
                         onClick = { showEmojiKeyboard = true },
-                        enabled = !uiState.isUploading
+                        enabled = !uiState.isUploading,
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.EmojiEmotions, contentDescription = stringResource(R.string.cd_emoji),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            Icons.Default.EmojiEmotions,
+                            contentDescription = stringResource(R.string.cd_emoji),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(26.dp)
+                        )
                     }
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    // Input field with attach button inside
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 4.dp)
+                    ) {
                         ComposerWithSelectionToolbar(
                             composer = composer,
                             onComposerChange = { updateComposer(it) },
@@ -860,23 +863,58 @@ fun ChatScreen(
                                 stringResource(R.string.composer_editing)
                             } else {
                                 stringResource(R.string.composer_hint)
-                            }
+                            },
+                            trailingContent = if (composer.text.isEmpty()) {
+                                {
+                                    IconButton(
+                                        onClick = { showAttachPicker = true },
+                                        enabled = !uiState.isUploading,
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.AttachFile,
+                                            contentDescription = stringResource(R.string.cd_attach_file),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                            } else null
                         )
                     }
-                    IconButton(
-                        onClick = {
-                            val text = composer.text.trim()
-                            if (text.isNotEmpty()) {
-                                viewModel.sendMessage(text)
-                                updateComposer(TextFieldValue(""))
-                                viewModel.clearMentionSuggestions()
-                            }
-                        },
-                        enabled = !uiState.isUploading
+
+                    // Round send button (right)
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (!uiState.isUploading && composer.text.trim().isNotEmpty())
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
+                            )
+                            .clickable(
+                                enabled = !uiState.isUploading && composer.text.trim().isNotEmpty()
+                            ) {
+                                val text = composer.text.trim()
+                                if (text.isNotEmpty()) {
+                                    viewModel.sendMessage(text)
+                                    updateComposer(TextFieldValue(""))
+                                    viewModel.clearMentionSuggestions()
+                                }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("➤", style = MaterialTheme.typography.titleLarge)
+                        Icon(
+                            Icons.Default.Send,
+                            contentDescription = stringResource(R.string.cd_send),
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
+                // === end Telegram-style composer row ===
             }
         }
     }
@@ -1035,6 +1073,24 @@ fun ChatScreen(
             onDismiss = { showCreatePollSheet = false },
             onCreate = { question, options, anonymous, multipleChoice ->
                 viewModel.createPoll(question, options, anonymous, multipleChoice)
+            }
+        )
+    }
+
+    if (showAttachPicker) {
+        AttachmentPickerSheet(
+            onDismiss = { showAttachPicker = false },
+            onPickFile = {
+                showAttachPicker = false
+                pickFileLauncher.launch(arrayOf("*/*"))
+            },
+            onPickGallery = {
+                showAttachPicker = false
+                pickFileLauncher.launch(arrayOf("image/*", "video/*"))
+            },
+            onCreatePoll = {
+                showAttachPicker = false
+                showCreatePollSheet = true
             }
         )
     }
@@ -2578,5 +2634,110 @@ private fun formatMessageTime(timestamp: Long): String {
         DateTimeFormatter.ofPattern("HH:mm").withZone(zone).format(instant)
     } else {
         DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm").withZone(zone).format(instant)
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Telegram-style attachment picker bottom sheet
+// ──────────────────────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AttachmentPickerSheet(
+    onDismiss: () -> Unit,
+    onPickGallery: () -> Unit,
+    onPickFile: () -> Unit,
+    onCreatePoll: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 4.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                AttachPickerItem(
+                    icon = Icons.Default.TagFaces,
+                    label = stringResource(R.string.attach_picker_gallery),
+                    containerColor = Color(0xFF4CAF50),
+                    onClick = onPickGallery
+                )
+                AttachPickerItem(
+                    icon = Icons.Default.Forum,
+                    label = stringResource(R.string.attach_picker_file),
+                    containerColor = Color(0xFF2196F3),
+                    onClick = onPickFile
+                )
+                AttachPickerItem(
+                    icon = Icons.Default.Poll,
+                    label = stringResource(R.string.attach_picker_poll),
+                    containerColor = Color(0xFFFF9800),
+                    onClick = onCreatePoll
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachPickerItem(
+    icon: ImageVector,
+    label: String,
+    containerColor: Color,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(76.dp)
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .background(color = containerColor, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
     }
 }

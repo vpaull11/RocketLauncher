@@ -12,10 +12,12 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -72,7 +74,8 @@ fun ComposerWithSelectionToolbar(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onRequestLinkDialog: (ComposerLinkDialogState) -> Unit,
-    hintText: String = ""
+    hintText: String = "",
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
     val density = LocalDensity.current
     val onSurfaceArgb = MaterialTheme.colorScheme.onSurface.toArgb()
@@ -95,40 +98,55 @@ fun ComposerWithSelectionToolbar(
             )
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        AndroidView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .heightIn(min = 48.dp),
-            factory = { ctx ->
-                val et = ComposerEditText(ctx).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setPadding(0, 0, 0, 0)
-                    minimumHeight = minH
-                    isFocusable = true
-                    isFocusableInTouchMode = true
-                    isClickable = true
-                    isLongClickable = true
-                    isCursorVisible = true
-                    showSoftInputOnFocus = true
-                    inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                        android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
-                        android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                    maxLines = 8
-                    isVerticalScrollBarEnabled = true
-                    importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO
-                    tag = holder
-                }
-                val textWatcher = object : TextWatcher {
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                    override fun afterTextChanged(s: Editable?) {
-                        val h = et.tag as? ComposerListenerHolder ?: return
-                        if (h.guard.skip) return
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AndroidView(
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentHeight()
+                    .heightIn(min = 48.dp),
+                factory = { ctx ->
+                    val et = ComposerEditText(ctx).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        setPadding(0, 0, 0, 0)
+                        minimumHeight = minH
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        isClickable = true
+                        isLongClickable = true
+                        isCursorVisible = true
+                        showSoftInputOnFocus = true
+                        inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                            android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                            android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                        maxLines = 8
+                        isVerticalScrollBarEnabled = true
+                        importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO
+                        tag = holder
+                    }
+                    val textWatcher = object : TextWatcher {
+                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                        override fun afterTextChanged(s: Editable?) {
+                            val h = et.tag as? ComposerListenerHolder ?: return
+                            if (h.guard.skip) return
+                            h.onComposerChange(
+                                TextFieldValue(
+                                    et.text?.toString().orEmpty(),
+                                    TextRange(et.selectionStart, et.selectionEnd)
+                                )
+                            )
+                        }
+                    }
+                    et.addTextChangedListener(textWatcher)
+                    et.onSelectionChangedCallback = sel@{
+                        val h = et.tag as? ComposerListenerHolder ?: return@sel
+                        if (h.guard.skip) return@sel
                         h.onComposerChange(
                             TextFieldValue(
                                 et.text?.toString().orEmpty(),
@@ -136,40 +154,32 @@ fun ComposerWithSelectionToolbar(
                             )
                         )
                     }
-                }
-                et.addTextChangedListener(textWatcher)
-                et.onSelectionChangedCallback = sel@{
-                    val h = et.tag as? ComposerListenerHolder ?: return@sel
-                    if (h.guard.skip) return@sel
-                    h.onComposerChange(
-                        TextFieldValue(
-                            et.text?.toString().orEmpty(),
-                            TextRange(et.selectionStart, et.selectionEnd)
-                        )
+                    et
+                },
+                update = { et ->
+                    val h = et.tag as ComposerListenerHolder
+                    h.onComposerChange = { latestOnChange.value(it) }
+                    h.onRequestLinkDialog = { latestOnLink.value(it) }
+
+                    et.isEnabled = enabled
+                    et.hint = hintText
+                    et.setTextColor(onSurfaceArgb)
+                    et.setHintTextColor(hintArgb)
+                    et.minimumHeight = minH
+                    et.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp)
+
+                    et.customSelectionActionModeCallback = buildSelectionCallback(
+                        et = et,
+                        holder = h
                     )
+
+                    syncComposerToEditText(et, composer, h.guard)
                 }
-                et
-            },
-            update = { et ->
-                val h = et.tag as ComposerListenerHolder
-                h.onComposerChange = { latestOnChange.value(it) }
-                h.onRequestLinkDialog = { latestOnLink.value(it) }
-
-                et.isEnabled = enabled
-                et.hint = hintText
-                et.setTextColor(onSurfaceArgb)
-                et.setHintTextColor(hintArgb)
-                et.minimumHeight = minH
-                et.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSizeSp)
-
-                et.customSelectionActionModeCallback = buildSelectionCallback(
-                    et = et,
-                    holder = h
-                )
-
-                syncComposerToEditText(et, composer, h.guard)
+            )
+            if (trailingContent != null) {
+                trailingContent()
             }
-        )
+        }
     }
 }
 

@@ -125,4 +125,9 @@
     <string name="room_event_ult">%1$s left the team</string>
     <string name="room_event_ut">%1$s joined the team</string>
     <string name="room_event_actor_body">%1$s: %2$s</string>
+    <string name="cd_send">Send</string>
+    <string name="attach_picker_title">Attach</string>
+    <string name="attach_picker_gallery">Gallery</string>
+    <string name="attach_picker_file">File</string>
+    <string name="attach_picker_poll">Poll</string>
 </resources>

@@ -133,7 +133,12 @@ data class ChatUiState(
     val readReceiptsSheet: ReadReceiptsSheetState? = null,
     /** Локальное состояние подписки на уведомления по треду ([tmid]). */
     val threadSubscribed: Boolean = false,
-    val threadFollowBusy: Boolean = false
+    val threadFollowBusy: Boolean = false,
+    /**
+     * Текст сообщения, которое не удалось отправить — UI должен вернуть его в composer для повторной попытки.
+     * Очищается через [ChatViewModel.consumeSendFailedText].
+     */
+    val sendFailedText: String? = null
 )
 
 data class ReadReceiptsSheetState(
@@ -576,16 +581,27 @@ class ChatViewModel @Inject constructor(
                 _uiState.update { s ->
                     s.copy(
                         scrollToBottomNonce = s.scrollToBottomNonce + 1L,
-                        threadSubscribed = if (isThread) true else s.threadSubscribed
+                        threadSubscribed = if (isThread) true else s.threadSubscribed,
+                        replyTo = null
                     )
                 }
             }
             result.onFailure { e ->
                 Log.e("ChatVM", "sendMessage: ${e.message}")
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update {
+                    it.copy(
+                        error = e.message,
+                        // Сохраняем исходный текст — UI вернёт его в поле ввода для повторной отправки
+                        sendFailedText = trimmed
+                    )
+                }
             }
-            _uiState.update { it.copy(replyTo = null) }
         }
+    }
+
+    /** Текст после неудачной отправки прочитан — UI уже восстановил его в composer. */
+    fun consumeSendFailedText() {
+        _uiState.update { it.copy(sendFailedText = null) }
     }
 
     fun subscribeToThread() {

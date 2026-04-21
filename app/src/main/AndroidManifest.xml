@@ -64,6 +64,10 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- Xiaomi Fast Boot (не является стандартным Android action) -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <!-- Некоторые устройства HTC/OnePlus используют этот вариант -->
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
         <activity

@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.rocketlauncher.data.realtime.MessageForegroundService
-import com.rocketlauncher.data.realtime.RealtimeMessageService
 import com.rocketlauncher.data.repository.SessionPrefs
 import com.rocketlauncher.domain.usecase.SyncChatsFromServerUseCase
 import dagger.hilt.android.EntryPointAccessors
@@ -20,7 +19,6 @@ import kotlinx.coroutines.launch
 @InstallIn(SingletonComponent::class)
 interface BootReceiverEntryPoint {
     fun sessionPrefs(): SessionPrefs
-    fun realtimeMessageService(): RealtimeMessageService
     fun syncChatsFromServerUseCase(): SyncChatsFromServerUseCase
 }
 
@@ -44,15 +42,15 @@ class BootReceiver : BroadcastReceiver() {
                 )
                 val sessionPrefs = entry.sessionPrefs()
                 val syncChatsFromServerUseCase = entry.syncChatsFromServerUseCase()
-                val realtimeMessageService = entry.realtimeMessageService()
 
                 val snap = sessionPrefs.getAll()
                 if (snap.authToken == null || snap.userId == null) return@launch
                 try {
                     syncChatsFromServerUseCase()
                 } catch (_: Exception) { }
+                // MessageForegroundService.start() запустит сервис,
+                // а тот в onCreate() сам вызовет realtimeService.connect()
                 MessageForegroundService.start(appContext)
-                realtimeMessageService.connect()
             } finally {
                 pendingResult.finish()
             }

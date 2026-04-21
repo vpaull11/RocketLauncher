@@ -125,4 +125,9 @@
     <string name="room_event_ult">%1$s покинул команду</string>
     <string name="room_event_ut">%1$s присоединился к команде</string>
     <string name="room_event_actor_body">%1$s: %2$s</string>
+    <string name="cd_send">Отправить</string>
+    <string name="attach_picker_title">Прикрепить</string>
+    <string name="attach_picker_gallery">Галерея</string>
+    <string name="attach_picker_file">Файл</string>
+    <string name="attach_picker_poll">Опрос</string>
 </resources>

@@ -28,7 +28,7 @@ class MessageForegroundService : Service() {
 
     @Inject lateinit var realtimeService: RealtimeMessageService
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
@@ -67,9 +67,9 @@ class MessageForegroundService : Service() {
             }
             null -> {
                 // intent == null означает, что Android перезапустил сервис после убийства.
-                // Это ключевой момент для диагностики — фиксируем в лог.
-                AppLog.e(TAG, "onStartCommand: restarted by system (intent=null), reconnecting WS")
-                realtimeService.connect()
+                // onCreate() уже вызвал realtimeService.connect(), поэтому здесь
+                // повторный вызов не нужен — иначе будет двойное WS-подключение.
+                AppLog.e(TAG, "onStartCommand: restarted by system (intent=null), WS will be connected via onCreate")
             }
             else -> AppLog.e(TAG, "onStartCommand: action=${intent.action}")
         }
@@ -79,6 +79,8 @@ class MessageForegroundService : Service() {
     override fun onDestroy() {
         AppLog.e(TAG, "onDestroy: Foreground service is being destroyed")
         scope.cancel()
+        // Пересоздаём scope на случай явного stop/start без пересоздания процесса
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         super.onDestroy()
     }
 
