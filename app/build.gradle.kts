@@ -102,6 +102,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-Xannotation-default-target=param-property",
+            "-opt-in=kotlinx.serialization.ExperimentalSerializationApi"
+        )
     }
     buildFeatures {
         compose = true
