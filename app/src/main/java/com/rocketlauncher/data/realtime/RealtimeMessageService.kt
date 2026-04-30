@@ -113,6 +113,10 @@ class RealtimeMessageService @Inject constructor(
     @Volatile var receivedMsgCount = 0; private set
     @Volatile var lastError: String? = null; private set
 
+    /** Эмитируется когда сервер вернул 403 / «session has expired» при DDP-логине. */
+    private val _sessionExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val sessionExpired: SharedFlow<Unit> = _sessionExpired.asSharedFlow()
+
     private fun diag(msg: String) {
         val ts = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
         val entry = "$ts $msg"
@@ -466,10 +470,21 @@ class RealtimeMessageService @Inject constructor(
                             val err = json.optJSONObject("error")
                             if (err == null && json.optString("id").startsWith("login-")) {
                                 onLoginSuccess()
-                            } else if (err != null) {
+                            } else if (err != null && json.optString("id").startsWith("login-")) {
                                 val errMsg = err.optString("message", "unknown")
+                                val errCode = err.optInt("error", 0)
                                 diag("DDP login error: $errMsg")
                                 lastError = "login: $errMsg"
+                                // 403 или текст о протухшей сессии → принудительный выход
+                                val isSessionExpired = errCode == 403 ||
+                                    errMsg.contains("session has expired", ignoreCase = true) ||
+                                    errMsg.contains("session expired",     ignoreCase = true) ||
+                                    errMsg.contains("log in again",        ignoreCase = true)
+                                if (isSessionExpired) {
+                                    diag("DDP login: session expired, forcing logout")
+                                    disconnect()
+                                    _sessionExpired.tryEmit(Unit)
+                                }
                             }
                         }
                         "ping" -> webSocket.send("""{"msg":"pong"}""")

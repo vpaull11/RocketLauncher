@@ -46,6 +46,16 @@ fun RocketNavHost(
         }
     }
 
+    // Автоматический выход на экран логина при протухшей сессии (выход через WebSocket 403)
+    LaunchedEffect(isReady, authState.isLoggedIn) {
+        if (isReady && !authState.isLoggedIn) {
+            navController.navigate(NavRoutes.LOGIN) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
     LaunchedEffect(inviteError) {
         val msg = inviteError
         if (msg != null) {

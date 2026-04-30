@@ -61,6 +61,12 @@ class AuthRepository @Inject constructor(
 
     init {
         scope.launch { loadSession() }
+        scope.launch {
+            realtimeService.sessionExpired.collect {
+                Log.w(TAG, "Session expired signal from WebSocket — forcing logout")
+                logout()
+            }
+        }
     }
 
     private suspend fun loadSession() {
