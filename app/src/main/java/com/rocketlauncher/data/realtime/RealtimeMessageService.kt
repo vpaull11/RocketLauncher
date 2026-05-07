@@ -86,7 +86,9 @@ class RealtimeMessageService @Inject constructor(
         .pingInterval(PING_INTERVAL_MS, TimeUnit.MILLISECONDS)
         .build()
 
-    private var webSocket: WebSocket? = null
+    @Volatile private var webSocket: WebSocket? = null
+    /** Предотвращает гонку: несколько вызовов doConnect() не должны создавать >1 WebSocket. */
+    private val isConnecting = AtomicBoolean(false)
     private val subscriptions = ConcurrentHashMap<String, String>()
     private var userNotifySubId: String? = null
     private var userPresenceLoggedSubId: String? = null
@@ -196,32 +198,59 @@ class RealtimeMessageService @Inject constructor(
             diag("doConnect: already has webSocket, skip")
             return
         }
+        // Атомарный guard: только один поток входит в тело coroutine.
+        if (!isConnecting.compareAndSet(false, true)) {
+            diag("doConnect: already connecting (isConnecting=true), skip")
+            return
+        }
         scope.launch {
-            val serverUrl = sessionPrefs.getServerUrl()
-            val authToken = sessionPrefs.getAuthToken()
-            if (serverUrl == null || authToken == null) {
-                diag("doConnect: no serverUrl/authToken, abort")
-                return@launch
+            try {
+                val serverUrl = sessionPrefs.getServerUrl()
+                val authToken = sessionPrefs.getAuthToken()
+                if (serverUrl == null || authToken == null) {
+                    diag("doConnect: no serverUrl/authToken, abort")
+                    isConnecting.set(false)
+                    return@launch
+                }
+                if (webSocket != null) {
+                    diag("doConnect: webSocket appeared, skip")
+                    isConnecting.set(false)
+                    return@launch
+                }
+
+                _connectionState.value = if (reconnectDelay > RECONNECT_MIN_MS)
+                    ConnectionState.RECONNECTING else ConnectionState.CONNECTING
+
+                val wsUrl = serverUrl
+                    .replace("https://", "wss://")
+                    .replace("http://", "ws://")
+                    .trimEnd('/') + "/websocket"
+
+                diag("doConnect: opening $wsUrl")
+                val request = Request.Builder().url(wsUrl).build()
+                webSocket = client.newWebSocket(request, createListener(authToken))
+                // isConnecting сбрасывается в onConnectionEstablished() или onConnectionLost()
+            } catch (e: Exception) {
+                diag("doConnect: exception ${e.message}")
+                webSocket = null
+                isConnecting.set(false)
+                _connectionState.value = ConnectionState.DISCONNECTED
+                scheduleReconnect()
             }
-            if (webSocket != null) return@launch
-
-            _connectionState.value = if (reconnectDelay > RECONNECT_MIN_MS)
-                ConnectionState.RECONNECTING else ConnectionState.CONNECTING
-
-            val wsUrl = serverUrl
-                .replace("https://", "wss://")
-                .replace("http://", "ws://")
-                .trimEnd('/') + "/websocket"
-
-            diag("doConnect: opening $wsUrl")
-            val request = Request.Builder().url(wsUrl).build()
-            webSocket = client.newWebSocket(request, createListener(authToken))
         }
     }
 
     private fun scheduleReconnect() {
-        if (!shouldBeConnected.get()) return
-        if (!networkMonitor.isOnline.value) return
+        if (!shouldBeConnected.get()) {
+            _connectionState.value = ConnectionState.DISCONNECTED
+            return
+        }
+        if (!networkMonitor.isOnline.value) {
+            // Сеть недоступна — ждём восстановления через startNetworkObserver.
+            // Явно выставляем DISCONNECTED, чтобы UI не застрял на CONNECTING.
+            _connectionState.value = ConnectionState.DISCONNECTED
+            return
+        }
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             _connectionState.value = ConnectionState.RECONNECTING
@@ -235,6 +264,7 @@ class RealtimeMessageService @Inject constructor(
         connected = true
         loginDone = false
         reconnectDelay = RECONNECT_MIN_MS
+        isConnecting.set(false)  // соединение установлено, разрешаем следующий doConnect()
         diag("WS connected (DDP handshake pending)")
     }
 
@@ -284,6 +314,7 @@ class RealtimeMessageService @Inject constructor(
         connected = false
         loginDone = false
         webSocket = null
+        isConnecting.set(false)  // разрешаем новый doConnect() после потери соединения
         diag("Connection lost")
         scheduleReconnect()
     }
@@ -484,6 +515,12 @@ class RealtimeMessageService @Inject constructor(
                                     diag("DDP login: session expired, forcing logout")
                                     disconnect()
                                     _sessionExpired.tryEmit(Unit)
+                                } else {
+                                    // Иная ошибка DDP-логина (например, временная):
+                                    // закрываем сокет → onClosed → onConnectionLost() → scheduleReconnect().
+                                    // Без этого loginDone остаётся false, а состояние зависает на CONNECTING.
+                                    diag("DDP login: non-expired error, closing WS for reconnect")
+                                    webSocket?.close(1000, "login error, retry")
                                 }
                             }
                         }
