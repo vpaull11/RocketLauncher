@@ -24,6 +24,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.rocketlauncher.R
+import com.rocketlauncher.data.repository.AppUpdateRepository
 import com.rocketlauncher.data.repository.AuthRepository
 import com.rocketlauncher.data.repository.ThemePreferences
 import com.rocketlauncher.domain.usecase.SyncChatsFromServerUseCase
@@ -41,6 +42,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var syncChatsFromServerUseCase: SyncChatsFromServerUseCase
+
+    @Inject
+    lateinit var appUpdateRepository: AppUpdateRepository
 
     @Inject
     lateinit var authRepository: AuthRepository
@@ -84,6 +88,12 @@ class MainActivity : ComponentActivity() {
                                 // тихо: список обновится при следующем заходе на экран чатов
                             }
                         }
+                    }
+                }
+                // Авто-проверка обновлений — не чаще 1 раза в час, при любом старте
+                if (authRepository.authState.value.isLoggedIn) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try { appUpdateRepository.emitAutoCheckIfNeeded() } catch (_: Exception) {}
                     }
                 }
             }

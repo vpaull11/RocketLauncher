@@ -283,6 +283,13 @@ class RoomListViewModel @Inject constructor(
                     }
                 }
         }
+
+        // Автоматическая проверка обновлений по сигналу из MainActivity (не чаще 1 ч)
+        viewModelScope.launch {
+            appUpdateRepository.autoCheckTrigger.collect {
+                checkForAppUpdate()
+            }
+        }
     }
 
     private fun groupAndSort(

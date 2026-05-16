@@ -3,12 +3,21 @@ package com.rocketlauncher.data.repository
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import com.rocketlauncher.BuildConfig
 import com.rocketlauncher.R
 import com.rocketlauncher.data.github.GitHubApi
 import com.rocketlauncher.util.SemVer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -16,6 +25,9 @@ import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private val Context.updateCheckDataStore: DataStore<Preferences>
+    by preferencesDataStore(name = "update_check_prefs")
 
 sealed class AppUpdateCheckResult {
     data object UpToDate : AppUpdateCheckResult()
@@ -27,12 +39,42 @@ sealed class AppUpdateCheckResult {
     data class Error(val message: String) : AppUpdateCheckResult()
 }
 
+private val LAST_CHECK_KEY = longPreferencesKey("update_last_auto_check_ms")
+private const val AUTO_CHECK_INTERVAL_MS = 3_600_000L // 1 час
+
 @Singleton
 class AppUpdateRepository @Inject constructor(
     private val gitHubApi: GitHubApi,
     private val okHttpClient: OkHttpClient,
     @ApplicationContext private val context: Context
 ) {
+
+    private val _autoCheckTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** Горячий поток-команда: эмитит когда пора делать авто-проверку обновлений. */
+    val autoCheckTrigger: SharedFlow<Unit> = _autoCheckTrigger.asSharedFlow()
+
+    /** Возвращает true, если с момента последней авто-проверки прошло не менее 1 часа. */
+    suspend fun shouldAutoCheck(): Boolean = withContext(Dispatchers.IO) {
+        val prefs = context.updateCheckDataStore.data.first()
+        val lastCheck = prefs[LAST_CHECK_KEY] ?: 0L
+        System.currentTimeMillis() - lastCheck >= AUTO_CHECK_INTERVAL_MS
+    }
+
+    /** Сохраняет текущее время как момент последней авто-проверки. */
+    suspend fun markAutoChecked(): Unit = withContext(Dispatchers.IO) {
+        context.updateCheckDataStore.edit { it[LAST_CHECK_KEY] = System.currentTimeMillis() }
+    }
+
+    /**
+     * Вызывается из [MainActivity.onStart]. Если прошёл час с последней авто-проверки —
+     * сохраняет timestamp и сигнализирует подписчикам через [autoCheckTrigger].
+     */
+    suspend fun emitAutoCheckIfNeeded() {
+        if (shouldAutoCheck()) {
+            markAutoChecked()
+            _autoCheckTrigger.tryEmit(Unit)
+        }
+    }
 
     suspend fun checkForUpdate(): AppUpdateCheckResult = withContext(Dispatchers.IO) {
         try {
